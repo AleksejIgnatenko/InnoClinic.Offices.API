@@ -19,6 +19,16 @@ namespace InnoClinic.Offices.API.Middlewares
             {
                 await _next(context);
             }
+            catch (ValidationException ex)
+            {
+                var statusCode = StatusCodes.Status400BadRequest;
+
+                context.Response.StatusCode = statusCode;
+                context.Response.ContentType = "application/json";
+
+                var result = JsonSerializer.Serialize(new { error = ex.Errors });
+                await context.Response.WriteAsync(result);
+            }
             catch (DataRepositoryException ex)
             {
                 var statusCode = (int)ex.HttpStatusCode;

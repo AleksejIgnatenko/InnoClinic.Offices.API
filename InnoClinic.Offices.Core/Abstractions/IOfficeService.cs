@@ -1,13 +1,14 @@
-﻿using InnoClinic.Offices.Core.Models;
+﻿using InnoClinic.Offices.Core.Models.OfficeModels;
 
 namespace InnoClinic.Offices.Application.Services
 {
     public interface IOfficeService
     {
-        Task CreateOfficeAsync(string address, Guid photoId, string registryPhoneNumber, bool isActive);
+        Task CreateOfficeAsync(string city, string street, string houseNumber, string officeNumber, string? photoId, string registryPhoneNumber, bool isActive);
         Task DeleteOfficeAsync(Guid id);
-        Task<IEnumerable<OfficeModel>> GetAllOfficesAsync();
-        Task<OfficeModel> GetOfficeByIdAsync(Guid id);
-        Task UpdateOfficeAsync(string address, Guid photoId, string registryPhoneNumber, bool isActive);
+        Task<IEnumerable<OfficeEntity>> GetAllOfficesAsync();
+        Task<IEnumerable<OfficeEntity>> GetAllActiveOfficesAsync();
+        Task<OfficeEntity> GetOfficeByIdAsync(Guid id);
+        Task UpdateOfficeAsync(Guid id, string city, string street, string houseNumber, string officeNumber, string? photoId, string registryPhoneNumber, bool isActive);
     }
 }

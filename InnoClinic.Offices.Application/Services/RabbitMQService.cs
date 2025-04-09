@@ -9,21 +9,37 @@ namespace InnoClinic.Offices.Application.Services
     public class RabbitMQService : IRabbitMQService
     {
         private readonly RabbitMQSetting _rabbitMqSetting;
+        private readonly ConnectionFactory _factory;
+
         public RabbitMQService(IOptions<RabbitMQSetting> rabbitMqSetting)
         {
             _rabbitMqSetting = rabbitMqSetting.Value;
-        }
 
-        public async Task PublishMessageAsync(object obj, string queueName)
-        {
-            var factory = new ConnectionFactory
+            _factory = new ConnectionFactory
             {
                 HostName = _rabbitMqSetting.HostName,
                 UserName = _rabbitMqSetting.UserName,
                 Password = _rabbitMqSetting.Password
             };
+        }
 
-            using var connection = factory.CreateConnection();
+        public async Task CreateQueuesAsync()
+        {
+            using (var connection = _factory.CreateConnection())
+            using (var channel = connection.CreateModel())
+            {
+                await Task.Run(() =>
+                {
+                    channel.QueueDeclare(RabbitMQQueues.ADD_OFFICE_QUEUE, durable: false, exclusive: false, autoDelete: false, arguments: null);
+                    channel.QueueDeclare(RabbitMQQueues.UPDATE_OFFICE_QUEUE, durable: false, exclusive: false, autoDelete: false, arguments: null);
+                    channel.QueueDeclare(RabbitMQQueues.DELETE_OFFICE_QUEUE, durable: false, exclusive: false, autoDelete: false, arguments: null);
+                });
+            }
+        }
+
+        public async Task PublishMessageAsync(object obj, string queueName)
+        {
+            using var connection = _factory.CreateConnection();
             using var channel = connection.CreateModel();
             channel.QueueDeclare(queue: queueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
 
