@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
-using InnoClinic.Offices.Core.Dto;
-using InnoClinic.Offices.Core.Models;
+using InnoClinic.Offices.Core.Models.OfficeModels;
 
 namespace InnoClinic.Offices.Application.MapperProfiles
 {
@@ -8,7 +7,7 @@ namespace InnoClinic.Offices.Application.MapperProfiles
     {
         public OfficeMapperProfiles()
         {
-            CreateMap<OfficeModel, OfficeDto>();
+            CreateMap<OfficeEntity, OfficeDto>();
         }
     }
 }

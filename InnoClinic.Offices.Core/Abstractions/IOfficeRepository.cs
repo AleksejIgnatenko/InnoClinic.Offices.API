@@ -1,13 +1,14 @@
-﻿using InnoClinic.Offices.Core.Models;
+﻿using InnoClinic.Offices.Core.Models.OfficeModels;
 
 namespace InnoClinic.Offices.DataAccess.Repositories
 {
     public interface IOfficeRepository
     {
-        Task CreateAsync(OfficeModel office);
+        Task CreateAsync(OfficeEntity office);
         Task DeleteAsync(Guid id);
-        Task<IEnumerable<OfficeModel>> GetAllAsync();
-        Task<OfficeModel> GetByIdAsync(Guid id);
-        Task UpdateAsync(OfficeModel office);
+        Task<IEnumerable<OfficeEntity>> GetAllAsync();
+        Task<IEnumerable<OfficeEntity>> GetAllActiveOfficesAsync();
+        Task<OfficeEntity> GetByIdAsync(Guid id);
+        Task UpdateAsync(OfficeEntity office);
     }
 }
