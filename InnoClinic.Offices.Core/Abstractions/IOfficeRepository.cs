@@ -2,13 +2,8 @@
 
 namespace InnoClinic.Offices.DataAccess.Repositories
 {
-    public interface IOfficeRepository
+    public interface IOfficeRepository : IBaseRepository<OfficeEntity>
     {
-        Task CreateAsync(OfficeEntity office);
-        Task DeleteAsync(Guid id);
-        Task<IEnumerable<OfficeEntity>> GetAllAsync();
         Task<IEnumerable<OfficeEntity>> GetAllActiveOfficesAsync();
-        Task<OfficeEntity> GetByIdAsync(Guid id);
-        Task UpdateAsync(OfficeEntity office);
     }
 }

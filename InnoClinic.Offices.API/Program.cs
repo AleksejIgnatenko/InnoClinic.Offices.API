@@ -2,9 +2,11 @@ using InnoClinic.Offices.API.Extensions;
 using InnoClinic.Offices.API.Middlewares;
 using InnoClinic.Offices.Application.MapperProfiles;
 using InnoClinic.Offices.Application.Services;
+using InnoClinic.Offices.DataAccess.Context;
 using InnoClinic.Offices.DataAccess.Repositories;
 using InnoClinic.Offices.Infrastructure.Mongo;
 using InnoClinic.Offices.Infrastructure.RabbitMQ;
+using InnoClinic.Offices.Infrastructure.YandexGeocoding;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -25,7 +27,13 @@ builder.Services.AddHttpClient();
 
 BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
 
-builder.Services.Configure<MongoDbSettings>(
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("yandexgeocodingsetting.json", optional: true, reloadOnChange: true);
+
+builder.Services.Configure<YandexGeocodingOptions>(builder.Configuration.GetSection("YandexGeocodingSetting"));
+
+builder.Services.Configure<MongoOptions>(
     builder.Configuration.GetSection("MongoDbSettings"));
 
 builder.Services.Configure<RabbitMQSetting>(
@@ -36,10 +44,13 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 
 builder.Services.AddSingleton<IMongoClient>(sp =>
 {
-    var mongoDbSettings = sp.GetRequiredService<IOptions<MongoDbSettings>>().Value;
-    return new MongoClient(mongoDbSettings.ConnectionString);
+    var mongoDbSettings = sp.GetRequiredService<IOptions<MongoOptions>>().Value;
+    return new MongoClient(mongoDbSettings.ConnectionUri);
 });
 
+builder.Services.AddSingleton<MongoDbContext>();
+
+builder.Services.AddScoped<IYandexGeocodingService, YandexGeocodingService>();
 builder.Services.AddScoped<IRabbitMQService, RabbitMQService>();
 builder.Services.AddTransient<IValidationService, ValidationService>();
 

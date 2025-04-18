@@ -1,8 +1,7 @@
 ﻿namespace InnoClinic.Offices.Core.Models.OfficeModels
 {
-    public class OfficeEntity
+    public class OfficeEntity : EntityBase
     {
-        public Guid Id { get; set; } 
         public string City { get; set; } = string.Empty;
         public string Street { get; set; } = string.Empty;
         public string HouseNumber { get; set; } = string.Empty;

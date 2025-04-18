@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace InnoClinic.Offices.API.Controllers
 {
-    [Authorize(Roles = "Receptionist")]
+    //[Authorize(Roles = "Receptionist")]
     [Route("api/[controller]")]
     [ApiController]
     public class OfficeController : ControllerBase

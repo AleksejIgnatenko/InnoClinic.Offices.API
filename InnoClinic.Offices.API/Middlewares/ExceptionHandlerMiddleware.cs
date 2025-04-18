@@ -29,7 +29,7 @@ namespace InnoClinic.Offices.API.Middlewares
                 var result = JsonSerializer.Serialize(new { error = ex.Errors });
                 await context.Response.WriteAsync(result);
             }
-            catch (DataRepositoryException ex)
+            catch (ExceptionWithStatusCode ex)
             {
                 var statusCode = (int)ex.HttpStatusCode;
 

@@ -3,33 +3,29 @@ using InnoClinic.Offices.Core.Exceptions;
 using InnoClinic.Offices.Core.Models.OfficeModels;
 using InnoClinic.Offices.DataAccess.Repositories;
 using InnoClinic.Offices.Infrastructure.RabbitMQ;
-using Newtonsoft.Json.Linq;
 
 namespace InnoClinic.Offices.Application.Services
 {
     public class OfficeService : IOfficeService
-    {
-        private const string API_Key = "7f22f510-13a1-4bb2-bd1d-65a4b2e24ea6";
-        private const string YANDEX_GEOCODING_API_URL = "https://geocode-maps.yandex.ru/1.x/";
- 
-        private readonly HttpClient _httpClient;
+    { 
         private readonly IOfficeRepository _officeRepository;
         private readonly IRabbitMQService _rabbitMQService;
         private readonly IMapper _mapper;
         private readonly IValidationService _validationService;
+        private readonly IYandexGeocodingService _yandexGeocodingService;
 
-        public OfficeService(IOfficeRepository officeRepository, HttpClient httpClient, IRabbitMQService rabbitMQService, IMapper mapper, IValidationService validationService)
+        public OfficeService(IOfficeRepository officeRepository, IRabbitMQService rabbitMQService, IMapper mapper, IValidationService validationService, IYandexGeocodingService yandexGeocodingService)
         {
             _officeRepository = officeRepository;
-            _httpClient = httpClient;
             _rabbitMQService = rabbitMQService;
             _mapper = mapper;
             _validationService = validationService;
+            _yandexGeocodingService = yandexGeocodingService;
         }
 
         public async Task CreateOfficeAsync(string city, string street, string houseNumber, string officeNumber, string? photoId, string registryPhoneNumber, bool isActive)
         {
-            var (longitude, latitude) = await GetCoordinatesAsync(city, street, houseNumber);
+            var (longitude, latitude) = await _yandexGeocodingService.GetCoordinatesAsync(city, street, houseNumber);
 
             var office = new OfficeEntity
             {
@@ -75,7 +71,7 @@ namespace InnoClinic.Offices.Application.Services
 
         public async Task UpdateOfficeAsync(Guid id, string city, string street, string houseNumber, string officeNumber, string? photoId, string registryPhoneNumber, bool isActive)
         {
-            var (longitude, latitude) = await GetCoordinatesAsync(city, street, houseNumber);
+            var (longitude, latitude) = await _yandexGeocodingService.GetCoordinatesAsync(city, street, houseNumber);
 
             var office = new OfficeEntity
             {
@@ -104,29 +100,6 @@ namespace InnoClinic.Offices.Application.Services
 
             var officeDto = _mapper.Map<OfficeDto>(office);
             await _rabbitMQService.PublishMessageAsync(officeDto, RabbitMQQueues.DELETE_OFFICE_QUEUE);
-        }
-
-        private async Task<(string longitude, string latitude)> GetCoordinatesAsync(string city, string street, string houseNumber)
-        {
-            var url = $"{YANDEX_GEOCODING_API_URL}?apikey={API_Key}&geocode={Uri.EscapeDataString(city + " " + street + " " + houseNumber)}&format=json";
-
-            var response = await _httpClient.GetAsync(url);
-            response.EnsureSuccessStatusCode();
-
-            var jsonResponse = await response.Content.ReadAsStringAsync();
-            var json = JObject.Parse(jsonResponse);
-
-            var featureMember = json["response"]["GeoObjectCollection"]["featureMember"];
-            if (featureMember != null && featureMember.HasValues)
-            {
-                var coordinates = featureMember[0]["GeoObject"]["Point"]["pos"].ToString().Split(' ');
-                var longitude = coordinates[0];
-                var latitude = coordinates[1];
-
-                return (latitude, longitude);
-            }
-
-            throw new DataRepositoryException("The specified address could not be found", 404);
         }
     }
 }
