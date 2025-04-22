@@ -8,10 +8,10 @@ namespace InnoClinic.Offices.Application.Services
 {
     public class RabbitMQService : IRabbitMQService
     {
-        private readonly RabbitMQSetting _rabbitMqSetting;
+        private readonly RabbitMQOptions _rabbitMqSetting;
         private readonly ConnectionFactory _factory;
 
-        public RabbitMQService(IOptions<RabbitMQSetting> rabbitMqSetting)
+        public RabbitMQService(IOptions<RabbitMQOptions> rabbitMqSetting)
         {
             _rabbitMqSetting = rabbitMqSetting.Value;
 

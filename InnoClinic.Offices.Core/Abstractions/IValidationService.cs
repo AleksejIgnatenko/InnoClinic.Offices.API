@@ -1,9 +1,10 @@
-﻿using InnoClinic.Offices.Core.Models.OfficeModels;
+﻿using FluentValidation.Results;
+using InnoClinic.Offices.Core.Models.OfficeModels;
 
 namespace InnoClinic.Offices.Application.Services
 {
     public interface IValidationService
     {
-        Dictionary<string, string> Validation(OfficeEntity office);
+        List<ValidationFailure> Validation(OfficeEntity office);
     }
 }

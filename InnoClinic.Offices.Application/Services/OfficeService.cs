@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using FluentValidation;
 using InnoClinic.Offices.Core.Exceptions;
 using InnoClinic.Offices.Core.Models.OfficeModels;
 using InnoClinic.Offices.DataAccess.Repositories;
@@ -23,9 +24,8 @@ namespace InnoClinic.Offices.Application.Services
             _yandexGeocodingService = yandexGeocodingService;
         }
 
-        public async Task CreateOfficeAsync(string city, string street, string houseNumber, string officeNumber, string? photoId, string registryPhoneNumber, bool isActive)
+        public async Task<OfficeEntity> CreateOfficeAsync(string city, string street, string houseNumber, string officeNumber, string? photoId, string registryPhoneNumber, bool isActive)
         {
-            var (longitude, latitude) = await _yandexGeocodingService.GetCoordinatesAsync(city, street, houseNumber);
 
             var office = new OfficeEntity
             {
@@ -34,8 +34,8 @@ namespace InnoClinic.Offices.Application.Services
                 Street = street,
                 HouseNumber = houseNumber,
                 OfficeNumber = officeNumber,
-                Longitude = longitude,
-                Latitude = latitude,
+                Longitude = string.Empty,
+                Latitude = string.Empty,
                 PhotoId = photoId,
                 RegistryPhoneNumber = registryPhoneNumber,
                 IsActive = isActive
@@ -48,10 +48,16 @@ namespace InnoClinic.Offices.Application.Services
                 throw new ValidationException(validationErrors);
             }
 
+            var (longitude, latitude) = await _yandexGeocodingService.GetCoordinatesAsync(city, street, houseNumber);
+            office.Longitude = longitude;
+            office.Latitude = latitude;
+
             await _officeRepository.CreateAsync(office);
 
             var officeDto = _mapper.Map<OfficeDto>(office);
             await _rabbitMQService.PublishMessageAsync(officeDto, RabbitMQQueues.ADD_OFFICE_QUEUE);
+
+            return office;
         }
 
         public async Task<IEnumerable<OfficeEntity>> GetAllOfficesAsync()

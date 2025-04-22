@@ -3,7 +3,7 @@ using MongoDB.Driver;
 
 namespace InnoClinic.Offices.DataAccess.Repositories;
 
-public abstract class BaseRepository<T>(IMongoCollection<T> _collection) : IBaseRepository<T> where T : EntityBase
+public abstract class RepositoryBase<T>(IMongoCollection<T> _collection) : IBaseRepository<T> where T : EntityBase
 {
     public async Task CreateAsync(T entity)
     {

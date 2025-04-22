@@ -1,4 +1,5 @@
-﻿using FluentValidation.Results;
+﻿using FluentValidation;
+using FluentValidation.Results;
 using InnoClinic.Offices.Application.Validators;
 using InnoClinic.Offices.Core.Models.OfficeModels;
 
@@ -6,21 +7,25 @@ namespace InnoClinic.Offices.Application.Services
 {
     public class ValidationService : IValidationService
     {
-        public Dictionary<string, string> Validation(OfficeEntity office)
+        public List<ValidationFailure> Validation(OfficeEntity entity)
         {
-            Dictionary<string, string> errors = new Dictionary<string, string>();
+            var validator = new OfficeValidator();
+            return Validate(entity, validator);
+        }
 
-            OfficeValidator validations = new OfficeValidator();
-            ValidationResult validationResult = validations.Validate(office);
+        private List<ValidationFailure> Validate<T>(T model, IValidator<T> validator)
+        {
+            var validationFailures = new List<ValidationFailure>();
+            ValidationResult validationResult = validator.Validate(model);
             if (!validationResult.IsValid)
             {
                 foreach (var failure in validationResult.Errors)
                 {
-                    errors[failure.PropertyName] = failure.ErrorMessage;
+                    validationFailures.Add(new ValidationFailure(failure.PropertyName, failure.ErrorMessage));
                 }
             }
 
-            return errors;
+            return validationFailures;
         }
     }
 }

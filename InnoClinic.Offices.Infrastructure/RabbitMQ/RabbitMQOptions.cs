@@ -1,6 +1,6 @@
 ﻿namespace InnoClinic.Offices.Infrastructure.RabbitMQ
 {
-    public class RabbitMQSetting
+    public class RabbitMQOptions
     {
         public string HostName { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;

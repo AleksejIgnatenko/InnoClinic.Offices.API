@@ -9,9 +9,10 @@ public class MongoDbContext
 {
     public IMongoCollection<OfficeEntity> OfficesCollection { get; set; }
 
-    public MongoDbContext(IOptions<MongoOptions> options, IMongoClient client)
+    public MongoDbContext(IOptions<MongoOptions> options, CustomMongoClient client)
     {
-        var database = client.GetDatabase(options.Value.DatabaseName);
+
+        var database = client._mongoClient.GetDatabase(options.Value.DatabaseName);
         OfficesCollection = database.GetCollection<OfficeEntity>(options.Value.CollectionsNames.First());
     }
 }

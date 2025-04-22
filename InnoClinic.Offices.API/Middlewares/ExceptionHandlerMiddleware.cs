@@ -1,53 +1,53 @@
 ﻿using System.Text.Json;
+using FluentValidation;
 using InnoClinic.Offices.Core.Exceptions;
 using Serilog;
 
-namespace InnoClinic.Offices.API.Middlewares
+namespace InnoClinic.Offices.API.Middlewares;
+
+public class ExceptionHandlerMiddleware
 {
-    public class ExceptionHandlerMiddleware
+    private readonly RequestDelegate _next;
+
+    public ExceptionHandlerMiddleware(RequestDelegate next)
     {
-        private readonly RequestDelegate _next;
+        _next = next;
+    }
 
-        public ExceptionHandlerMiddleware(RequestDelegate next)
+    public async Task Invoke(HttpContext context)
+    {
+        try
         {
-            _next = next;
+            await _next(context);
         }
-
-        public async Task Invoke(HttpContext context)
+        catch (ValidationException ex)
         {
-            try
-            {
-                await _next(context);
-            }
-            catch (ValidationException ex)
-            {
-                var statusCode = StatusCodes.Status400BadRequest;
+            var statusCode = StatusCodes.Status400BadRequest;
 
-                context.Response.StatusCode = statusCode;
-                context.Response.ContentType = "application/json";
+            context.Response.StatusCode = statusCode;
+            context.Response.ContentType = "application/json";
 
-                var result = JsonSerializer.Serialize(new { error = ex.Errors });
-                await context.Response.WriteAsync(result);
-            }
-            catch (ExceptionWithStatusCode ex)
-            {
-                var statusCode = (int)ex.HttpStatusCode;
+            var result = JsonSerializer.Serialize(new { error = ex.Errors });
+            await context.Response.WriteAsync(result);
+        }
+        catch (ExceptionWithStatusCode ex)
+        {
+            var statusCode = (int)ex.HttpStatusCode;
 
-                context.Response.StatusCode = statusCode;
-                context.Response.ContentType = "application/json";
+            context.Response.StatusCode = statusCode;
+            context.Response.ContentType = "application/json";
 
-                var result = JsonSerializer.Serialize(new { error = ex.Message });
-                await context.Response.WriteAsync(result);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex.Message);
-                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                context.Response.ContentType = "application/json";
+            var result = JsonSerializer.Serialize(new { error = ex.Message });
+            await context.Response.WriteAsync(result);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex.Message);
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
 
-                var result = JsonSerializer.Serialize(new { error = ex.Message });
-                await context.Response.WriteAsync(result);
-            }
+            var result = JsonSerializer.Serialize(new { error = ex.Message });
+            await context.Response.WriteAsync(result);
         }
     }
 }

@@ -6,7 +6,7 @@ namespace InnoClinic.Offices.DataAccess.Context;
 
 public class CustomMongoClient
 {
-    protected readonly IMongoClient _mongoClient;
+    protected internal readonly IMongoClient _mongoClient;
 
     public CustomMongoClient(IOptions<MongoOptions> options)
     {

@@ -4,7 +4,7 @@ namespace InnoClinic.Offices.Application.Services
 {
     public interface IOfficeService
     {
-        Task CreateOfficeAsync(string city, string street, string houseNumber, string officeNumber, string? photoId, string registryPhoneNumber, bool isActive);
+        Task<OfficeEntity> CreateOfficeAsync(string city, string street, string houseNumber, string officeNumber, string? photoId, string registryPhoneNumber, bool isActive);
         Task DeleteOfficeAsync(Guid id);
         Task<IEnumerable<OfficeEntity>> GetAllOfficesAsync();
         Task<IEnumerable<OfficeEntity>> GetAllActiveOfficesAsync();
