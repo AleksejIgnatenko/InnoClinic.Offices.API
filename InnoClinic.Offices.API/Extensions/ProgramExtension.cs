@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using InnoClinic.Offices.Infrastructure.Cors;
 using Microsoft.Extensions.Options;
 using InnoClinic.Offices.API.Middlewares;
+using FluentValidation.AspNetCore;
 
 namespace InnoClinic.Offices.API.Extensions;
 
@@ -22,7 +23,7 @@ public static class ProgramExtension
     public static WebApplicationBuilder ConfigureBuilder(this WebApplicationBuilder builder)
     {
         Log.Logger = new LoggerConfiguration()
-            .CreateSerilog();
+            .CreateSerilog(builder.Host);
 
         builder.Configuration
             .AddEnvironmentVariables()
@@ -43,6 +44,7 @@ public static class ProgramExtension
                 var customCorsOptions = serviceProvider.GetRequiredService<IOptions<CustomCorsOptions>>();
                 options.ConfigureAllowAllCors(customCorsOptions);
             })
+            .AddFluentValidation()
             .AddControllers();
         
         BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));

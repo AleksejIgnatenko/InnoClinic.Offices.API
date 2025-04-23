@@ -20,33 +20,9 @@ class OfficeRepositoryTests
     private OfficeEntity office;
     private OfficeEntity office1;
 
-    [SetUp]
-    public async Task SetUp()
+    [OneTimeSetUp]
+    public async Task OneTimeSetUp()
     {
-        office = new OfficeEntity
-        {
-            Id = Guid.NewGuid(),
-            City = "City",
-            Street = "Street",
-            HouseNumber = "HouseNumber",
-            Longitude = "Longitude",
-            Latitude = "Latitude",
-            RegistryPhoneNumber = "RegistryPhoneNumber",
-            IsActive = true,
-        };
-
-        office1 = new OfficeEntity
-        {
-            Id = Guid.NewGuid(),
-            City = "City",
-            Street = "Street",
-            HouseNumber = "HouseNumber",
-            Longitude = "Longitude",
-            Latitude = "Latitude",
-            RegistryPhoneNumber = "RegistryPhoneNumber",
-            IsActive = false,
-        };
-
         BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
 
         _dbContainer = new MongoDbBuilder()
@@ -78,12 +54,40 @@ class OfficeRepositoryTests
         _repository = new OfficeRepository(_context);
     }
 
-    [TearDown]
-    public async Task TearDown()
+    [OneTimeTearDown]
+    public async Task OneTimeTearDown()
     {
         await _context.OfficesCollection.Database.DropCollectionAsync("Offices");
         await _dbContainer.StopAsync();
         await _dbContainer.DisposeAsync();
+    }
+
+    [SetUp]
+    public async Task SetUp()
+    {
+        office = new OfficeEntity
+        {
+            Id = Guid.NewGuid(),
+            City = "City",
+            Street = "Street",
+            HouseNumber = "HouseNumber",
+            Longitude = "Longitude",
+            Latitude = "Latitude",
+            RegistryPhoneNumber = "RegistryPhoneNumber",
+            IsActive = true,
+        };
+
+        office1 = new OfficeEntity
+        {
+            Id = Guid.NewGuid(),
+            City = "City",
+            Street = "Street",
+            HouseNumber = "HouseNumber",
+            Longitude = "Longitude",
+            Latitude = "Latitude",
+            RegistryPhoneNumber = "RegistryPhoneNumber",
+            IsActive = false,
+        };
     }
 
     [Test]

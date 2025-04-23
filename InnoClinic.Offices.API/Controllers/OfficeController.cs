@@ -20,7 +20,7 @@ namespace InnoClinic.Offices.API.Controllers
         [HttpPost]
         public async Task<ActionResult> CreateOffice(OfficeRequest officeRequest)
         {
-            var office = await _officeService.CreateOfficeAsync(officeRequest.City, officeRequest.Street, officeRequest.HouseNumber, officeRequest.OfficeNumber, officeRequest.PhotoId, officeRequest.RegistryPhoneNumber, officeRequest.IsActive);
+            var office = await _officeService.CreateOfficeAsync(officeRequest);
 
             return CreatedAtAction(nameof(GetOfficeById), new { id = office.Id }, office);
         }
@@ -49,7 +49,7 @@ namespace InnoClinic.Offices.API.Controllers
         [HttpPut("{id:guid}")]
         public async Task<ActionResult> UpdateOffice(Guid id, OfficeRequest officeRequest)
         {
-            await _officeService.UpdateOfficeAsync(id, officeRequest.City, officeRequest.Street, officeRequest.HouseNumber, officeRequest.OfficeNumber, officeRequest.PhotoId, officeRequest.RegistryPhoneNumber, officeRequest.IsActive);
+            await _officeService.UpdateOfficeAsync(id, officeRequest);
 
             return Ok();
         }

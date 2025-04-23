@@ -3,9 +3,9 @@ using InnoClinic.Offices.Core.Models.OfficeModels;
 
 namespace InnoClinic.Offices.Application.Validators
 {
-    internal class OfficeValidator : AbstractValidator<OfficeEntity>
+    internal class OfficeEntityValidator : AbstractValidator<OfficeEntity>
     {
-        public OfficeValidator()
+        public OfficeEntityValidator()
         {
             RuleFor(x => x.City)
                 .NotEmpty().WithMessage("City must not be empty.");

@@ -1,111 +1,77 @@
 ﻿using AutoMapper;
-using FluentValidation;
-using InnoClinic.Offices.Core.Exceptions;
 using InnoClinic.Offices.Core.Models.OfficeModels;
 using InnoClinic.Offices.DataAccess.Repositories;
 using InnoClinic.Offices.Infrastructure.RabbitMQ;
 
-namespace InnoClinic.Offices.Application.Services
-{
-    public class OfficeService : IOfficeService
-    { 
-        private readonly IOfficeRepository _officeRepository;
-        private readonly IRabbitMQService _rabbitMQService;
-        private readonly IMapper _mapper;
-        private readonly IValidationService _validationService;
-        private readonly IYandexGeocodingService _yandexGeocodingService;
+namespace InnoClinic.Offices.Application.Services;
 
-        public OfficeService(IOfficeRepository officeRepository, IRabbitMQService rabbitMQService, IMapper mapper, IValidationService validationService, IYandexGeocodingService yandexGeocodingService)
-        {
-            _officeRepository = officeRepository;
-            _rabbitMQService = rabbitMQService;
-            _mapper = mapper;
-            _validationService = validationService;
-            _yandexGeocodingService = yandexGeocodingService;
-        }
+public class OfficeService : IOfficeService
+{ 
+    private readonly IOfficeRepository _officeRepository;
+    private readonly IRabbitMQService _rabbitMQService;
+    private readonly IMapper _mapper;
+    private readonly IYandexGeocodingService _yandexGeocodingService;
 
-        public async Task<OfficeEntity> CreateOfficeAsync(string city, string street, string houseNumber, string officeNumber, string? photoId, string registryPhoneNumber, bool isActive)
-        {
+    public OfficeService(IOfficeRepository officeRepository, IRabbitMQService rabbitMQService, IMapper mapper, IYandexGeocodingService yandexGeocodingService)
+    {
+        _officeRepository = officeRepository;
+        _rabbitMQService = rabbitMQService;
+        _mapper = mapper;
+        _yandexGeocodingService = yandexGeocodingService;
+    }
 
-            var office = new OfficeEntity
-            {
-                Id = Guid.NewGuid(),
-                City = city,
-                Street = street,
-                HouseNumber = houseNumber,
-                OfficeNumber = officeNumber,
-                Longitude = string.Empty,
-                Latitude = string.Empty,
-                PhotoId = photoId,
-                RegistryPhoneNumber = registryPhoneNumber,
-                IsActive = isActive
-            };
+    public async Task<OfficeEntity> CreateOfficeAsync(OfficeRequest officeRequest)
+    {
+        var office = _mapper.Map<OfficeEntity>(officeRequest);
 
-            var validationErrors = _validationService.Validation(office);
+        var (longitude, latitude) = await _yandexGeocodingService.GetCoordinatesAsync(office.City, office.Street, office.HouseNumber);
+        office.Longitude = longitude;
+        office.Latitude = latitude;
 
-            if (validationErrors.Count != 0)
-            {
-                throw new ValidationException(validationErrors);
-            }
+        await _officeRepository.CreateAsync(office);
 
-            var (longitude, latitude) = await _yandexGeocodingService.GetCoordinatesAsync(city, street, houseNumber);
-            office.Longitude = longitude;
-            office.Latitude = latitude;
+        var officeDto = _mapper.Map<OfficeDto>(office);
+        await _rabbitMQService.PublishMessageAsync(officeDto, RabbitMQQueues.ADD_OFFICE_QUEUE);
 
-            await _officeRepository.CreateAsync(office);
+        return office;
+    }
 
-            var officeDto = _mapper.Map<OfficeDto>(office);
-            await _rabbitMQService.PublishMessageAsync(officeDto, RabbitMQQueues.ADD_OFFICE_QUEUE);
+    public async Task<IEnumerable<OfficeEntity>> GetAllOfficesAsync()
+    {
+        return await _officeRepository.GetAllAsync();
+    }
 
-            return office;
-        }
+    public async Task<IEnumerable<OfficeEntity>> GetAllActiveOfficesAsync()
+    {
+        return await _officeRepository.GetAllActiveOfficesAsync();
+    }
 
-        public async Task<IEnumerable<OfficeEntity>> GetAllOfficesAsync()
-        {
-            return await _officeRepository.GetAllAsync();
-        }
+    public async Task<OfficeEntity> GetOfficeByIdAsync(Guid id)
+    {
+        return await _officeRepository.GetByIdAsync(id);
+    }
 
-        public async Task<IEnumerable<OfficeEntity>> GetAllActiveOfficesAsync()
-        {
-            return await _officeRepository.GetAllActiveOfficesAsync();
-        }
+    public async Task UpdateOfficeAsync(Guid id, OfficeRequest officeRequest)
+    {
+        var office = await _officeRepository.GetByIdAsync(id);
 
-        public async Task<OfficeEntity> GetOfficeByIdAsync(Guid id)
-        {
-            return await _officeRepository.GetByIdAsync(id);
-        }
+        _mapper.Map(officeRequest, office);
+        var (longitude, latitude) = await _yandexGeocodingService.GetCoordinatesAsync(office.City, office.Street, office.HouseNumber);
+        office.Longitude = longitude;
+        office.Latitude = latitude;
 
-        public async Task UpdateOfficeAsync(Guid id, string city, string street, string houseNumber, string officeNumber, string? photoId, string registryPhoneNumber, bool isActive)
-        {
-            var (longitude, latitude) = await _yandexGeocodingService.GetCoordinatesAsync(city, street, houseNumber);
+        await _officeRepository.UpdateAsync(office);
 
-            var office = new OfficeEntity
-            {
-                Id = id,
-                City = city,
-                Street = street,
-                HouseNumber = houseNumber,
-                OfficeNumber = officeNumber,
-                Longitude = longitude,
-                Latitude = latitude,
-                PhotoId = photoId,
-                RegistryPhoneNumber = registryPhoneNumber,
-                IsActive = isActive
-            };
+        var officeDto = _mapper.Map<OfficeDto>(office);
+        await _rabbitMQService.PublishMessageAsync(officeDto, RabbitMQQueues.UPDATE_OFFICE_QUEUE);
+    }
 
-            await _officeRepository.UpdateAsync(office);
+    public async Task DeleteOfficeAsync(Guid id)
+    {
+        var office = await _officeRepository.GetByIdAsync(id);
+        await _officeRepository.DeleteAsync(id);
 
-            var officeDto = _mapper.Map<OfficeDto>(office);
-            await _rabbitMQService.PublishMessageAsync(officeDto, RabbitMQQueues.UPDATE_OFFICE_QUEUE);
-        }
-
-        public async Task DeleteOfficeAsync(Guid id)
-        {
-            var office = await _officeRepository.GetByIdAsync(id);
-            await _officeRepository.DeleteAsync(id);
-
-            var officeDto = _mapper.Map<OfficeDto>(office);
-            await _rabbitMQService.PublishMessageAsync(officeDto, RabbitMQQueues.DELETE_OFFICE_QUEUE);
-        }
+        var officeDto = _mapper.Map<OfficeDto>(office);
+        await _rabbitMQService.PublishMessageAsync(officeDto, RabbitMQQueues.DELETE_OFFICE_QUEUE);
     }
 }
