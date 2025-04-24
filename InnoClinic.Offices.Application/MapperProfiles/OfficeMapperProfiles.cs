@@ -9,6 +9,7 @@ public class OfficeMapperProfiles : Profile
     {
         CreateMap<OfficeRequest, OfficeEntity>()
             .ForMember(dest => dest.Id, opt => opt.Ignore());
+
         CreateMap<OfficeEntity, OfficeDto>();
     }
 }

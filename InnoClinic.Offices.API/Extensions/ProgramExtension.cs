@@ -25,6 +25,8 @@ public static class ProgramExtension
         Log.Logger = new LoggerConfiguration()
             .CreateSerilog(builder.Host);
 
+        BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+
         builder.Configuration
             .AddEnvironmentVariables()
             .LoadConfiguration();
@@ -38,6 +40,7 @@ public static class ProgramExtension
             .AddSwaggerGen()
             .AddHttpClient()
             .AddJwtAuthentication(builder.Services.BuildServiceProvider().GetRequiredService<IOptions<JwtOptions>>())
+            .AddMapperProfiles()
             .AddCors(options =>
             {
                 var serviceProvider = builder.Services.BuildServiceProvider();
@@ -47,9 +50,6 @@ public static class ProgramExtension
             .AddFluentValidation()
             .AddControllers();
         
-        BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
-
-        builder.Services.AddAutoMapper(typeof(OfficeMapperProfiles));
 
         return builder;
     }
@@ -99,6 +99,13 @@ public static class ProgramExtension
         services.Configure<MongoOptions>(configuration.GetSection(nameof(MongoOptions)));
         services.Configure<YandexGeocodingOptions>(configuration.GetSection(nameof(YandexGeocodingOptions)));
         services.Configure<CustomCorsOptions>(configuration.GetSection(nameof(CustomCorsOptions)));
+
+        return services;
+    }
+
+    private static IServiceCollection AddMapperProfiles(this IServiceCollection services)
+    {
+        services.AddAutoMapper(typeof(OfficeMapperProfiles));
 
         return services;
     }
