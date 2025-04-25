@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace InnoClinic.Offices.API.Controllers
 {
-    [Authorize(Roles = "Receptionist")]
+    //[Authorize(Roles = "Receptionist")]
     [Route("api/[controller]")]
     [ApiController]
     public class OfficeController : ControllerBase
@@ -18,48 +18,48 @@ namespace InnoClinic.Offices.API.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> CreateOfficeAsync(OfficeRequest officeRequest)
+        public async Task<ActionResult> CreateOffice(OfficeRequest officeRequest)
         {
-            await _officeService.CreateOfficeAsync(officeRequest.City, officeRequest.Street, officeRequest.HouseNumber, officeRequest.OfficeNumber, officeRequest.PhotoId, officeRequest.RegistryPhoneNumber, officeRequest.IsActive);
+            var office = await _officeService.CreateOfficeAsync(officeRequest);
 
-            return Ok();
+            return CreatedAtAction(nameof(GetOfficeById), new { id = office.Id }, office);
         }
 
         [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult> GetAllOfficesAsync()
+        public async Task<ActionResult> GetAllOffices()
         {
             return Ok(await _officeService.GetAllOfficesAsync());
         }
 
         [AllowAnonymous]
         [HttpGet("{id:guid}")]
-        public async Task<ActionResult> GetOfficeByIdAsync(Guid id)
+        public async Task<ActionResult> GetOfficeById(Guid id)
         {
             return Ok(await _officeService.GetOfficeByIdAsync(id));
         }
 
         [AllowAnonymous]
         [HttpGet("all-active-offices")]
-        public async Task<ActionResult> GetAllActiveOfficesAsync()
+        public async Task<ActionResult> GetAllActiveOffices()
         {
             return Ok(await _officeService.GetAllActiveOfficesAsync());
         }
 
         [HttpPut("{id:guid}")]
-        public async Task<ActionResult> UpdateOfficeAsync(Guid id, OfficeRequest officeRequest)
+        public async Task<ActionResult> UpdateOffice(Guid id, OfficeRequest officeRequest)
         {
-            await _officeService.UpdateOfficeAsync(id, officeRequest.City, officeRequest.Street, officeRequest.HouseNumber, officeRequest.OfficeNumber, officeRequest.PhotoId, officeRequest.RegistryPhoneNumber, officeRequest.IsActive);
+            await _officeService.UpdateOfficeAsync(id, officeRequest);
 
             return Ok();
         }
 
         [HttpDelete("{id:guid}")]
-        public async Task<ActionResult> DeleteOfficeAsync(Guid id)
+        public async Task<ActionResult> DeleteOffice(Guid id)
         {
             await _officeService.DeleteOfficeAsync(id);
 
-            return Ok();
+            return NoContent();
         }
     }
 }

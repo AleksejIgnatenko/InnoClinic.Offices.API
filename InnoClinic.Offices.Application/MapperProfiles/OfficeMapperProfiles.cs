@@ -1,13 +1,15 @@
 ﻿using AutoMapper;
 using InnoClinic.Offices.Core.Models.OfficeModels;
 
-namespace InnoClinic.Offices.Application.MapperProfiles
+namespace InnoClinic.Offices.Application.MapperProfiles;
+
+public class OfficeMapperProfiles : Profile
 {
-    public class OfficeMapperProfiles : Profile
+    public OfficeMapperProfiles()
     {
-        public OfficeMapperProfiles()
-        {
-            CreateMap<OfficeEntity, OfficeDto>();
-        }
+        CreateMap<OfficeRequest, OfficeEntity>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore());
+
+        CreateMap<OfficeEntity, OfficeDto>();
     }
 }

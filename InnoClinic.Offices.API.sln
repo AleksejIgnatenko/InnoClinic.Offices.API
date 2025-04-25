@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35527.113 d17.12
+VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnoClinic.Offices.API", "InnoClinic.Offices.API\InnoClinic.Offices.API.csproj", "{B22F0CB0-62C2-4DAE-898A-A90A4696BDD9}"
 EndProject
@@ -12,6 +12,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnoClinic.Offices.Core", "InnoClinic.Offices.Core\InnoClinic.Offices.Core.csproj", "{CCE6BD20-31F0-4996-A5E8-F0995C092838}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnoClinic.Offices.Application", "InnoClinic.Offices.Application\InnoClinic.Offices.Application.csproj", "{75AA7025-B3A3-4445-9144-1EF5D77A847F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnoClinic.Offices.TestSuiteNUnit", "InnoClinic.Offices.TestSuiteNUnit\InnoClinic.Offices.TestSuiteNUnit.csproj", "{E175651F-42EC-47B0-8E5A-6BA0A6E41881}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,8 +41,15 @@ Global
 		{75AA7025-B3A3-4445-9144-1EF5D77A847F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{75AA7025-B3A3-4445-9144-1EF5D77A847F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{75AA7025-B3A3-4445-9144-1EF5D77A847F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E175651F-42EC-47B0-8E5A-6BA0A6E41881}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E175651F-42EC-47B0-8E5A-6BA0A6E41881}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E175651F-42EC-47B0-8E5A-6BA0A6E41881}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E175651F-42EC-47B0-8E5A-6BA0A6E41881}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9BF52D9C-E58F-4617-ACCD-8C16702F84C5}
 	EndGlobalSection
 EndGlobal

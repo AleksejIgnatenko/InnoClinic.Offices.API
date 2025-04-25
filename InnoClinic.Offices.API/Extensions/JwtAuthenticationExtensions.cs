@@ -1,33 +1,30 @@
 ﻿using InnoClinic.Offices.Infrastructure.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-namespace InnoClinic.Offices.API.Extensions
-{
-    public static class JwtAuthenticationExtensions
-    {
-        public static void AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
-        {
-            // Load JWT settings
-            services.Configure<JwtOptions>(configuration.GetSection("JwtSettings"));
-            var jwtOptions = configuration.GetSection("JwtSettings").Get<JwtOptions>();
+namespace InnoClinic.Offices.API.Extensions;
 
-            // Add JWT bearer authentication
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+public static class JwtAuthenticationExtensions
+{
+    public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IOptions<JwtOptions> jwtOptions)
+    {
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateAudience = true,
-                        ValidAudiences = new List<string> { jwtOptions.Audience },
-                        ValidateIssuer = true,
-                        ValidIssuer = jwtOptions.Issuer,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions?.SecretKey))
-                    };
-                });
-        }
+                    ValidateAudience = true,
+                    ValidAudiences = new List<string> { jwtOptions.Value.Audience },
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtOptions.Value.Issuer,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Value.SecretKey))
+                };
+            });
+
+        return services;
     }
 }
