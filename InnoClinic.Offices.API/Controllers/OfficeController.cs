@@ -1,65 +1,95 @@
-﻿using InnoClinic.Offices.Application.Services;
+﻿using InnoClinic.Offices.Core.Abstractions;
 using InnoClinic.Offices.Core.Models.OfficeModels;
+using InnoClinic.Offices.Infrastructure.Enums.Cache;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace InnoClinic.Offices.API.Controllers
+namespace InnoClinic.Offices.API.Controllers;
+
+/// <summary>
+/// Controller for managing offices.
+/// </summary>
+[ApiController]
+[Route("api/[controller]")]
+[Authorize(Roles = "Receptionist")]
+public class OfficeController(IOfficeService officeService) : ControllerBase
 {
-    //[Authorize(Roles = "Receptionist")]
-    [Route("api/[controller]")]
-    [ApiController]
-    public class OfficeController : ControllerBase
+    private readonly IOfficeService _officeService = officeService;
+
+    /// <summary>
+    /// Create a new office.
+    /// </summary>
+    /// <param name="officeRequest">Request to create an office.</param>
+    /// <returns>ActionResult with the newly created office.</returns>
+    [HttpPost]
+    public async Task<ActionResult> CreateOffice(OfficeRequest officeRequest)
     {
-        private readonly IOfficeService _officeService;
+        var office = await _officeService.CreateOfficeAsync(officeRequest);
 
-        public OfficeController(IOfficeService officeService)
-        {
-            _officeService = officeService;
-        }
+        return CreatedAtAction(nameof(GetOfficeById), new { id = office.Id }, office);
+    }
 
-        [HttpPost]
-        public async Task<ActionResult> CreateOffice(OfficeRequest officeRequest)
-        {
-            var office = await _officeService.CreateOfficeAsync(officeRequest);
+    /// <summary>
+    /// Get all offices.
+    /// </summary>
+    /// <returns>ActionResult with a list of all offices.</returns>
+    [AllowAnonymous]
+    [HttpGet]
+    [ResponseCache(CacheProfileName = nameof(CacheProfileNameEnum.CacheDefault90))]
+    public async Task<ActionResult> GetAllOffices()
+    {
+        return Ok(await _officeService.GetAllOfficesAsync());
+    }
 
-            return CreatedAtAction(nameof(GetOfficeById), new { id = office.Id }, office);
-        }
+    /// <summary>
+    /// Get an office by its ID.
+    /// </summary>
+    /// <param name="id">The ID of the office to retrieve.</param>
+    /// <returns>ActionResult with the office information.</returns>
+    [AllowAnonymous]
+    [HttpGet("{id:guid}")]
+    [ResponseCache(CacheProfileName = nameof(CacheProfileNameEnum.CacheDefault90))]
+    public async Task<ActionResult> GetOfficeById(Guid id)
+    {
+        return Ok(await _officeService.GetOfficeByIdAsync(id));
+    }
 
-        [AllowAnonymous]
-        [HttpGet]
-        public async Task<ActionResult> GetAllOffices()
-        {
-            return Ok(await _officeService.GetAllOfficesAsync());
-        }
+    /// <summary>
+    /// Get all active offices.
+    /// </summary>
+    /// <returns>ActionResult with a list of all active offices.</returns>
+    [AllowAnonymous]
+    [HttpGet("active")]
+    [ResponseCache(CacheProfileName = nameof(CacheProfileNameEnum.CacheDefault90))]
+    public async Task<ActionResult> GetAllActiveOffices()
+    {
+        return Ok(await _officeService.GetAllActiveOfficesAsync());
+    }
 
-        [AllowAnonymous]
-        [HttpGet("{id:guid}")]
-        public async Task<ActionResult> GetOfficeById(Guid id)
-        {
-            return Ok(await _officeService.GetOfficeByIdAsync(id));
-        }
+    /// <summary>
+    /// Update an existing office.
+    /// </summary>
+    /// <param name="id">The ID of the office to update.</param>
+    /// <param name="officeRequest">Request to update the office.</param>
+    /// <returns>ActionResult with the updated office information.</returns>
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult> UpdateOffice(Guid id, OfficeRequest officeRequest)
+    {
+        var office = await _officeService.UpdateOfficeAsync(id, officeRequest);
 
-        [AllowAnonymous]
-        [HttpGet("all-active-offices")]
-        public async Task<ActionResult> GetAllActiveOffices()
-        {
-            return Ok(await _officeService.GetAllActiveOfficesAsync());
-        }
+        return CreatedAtAction(nameof(GetOfficeById), new { id = office.Id }, office);
+    }
 
-        [HttpPut("{id:guid}")]
-        public async Task<ActionResult> UpdateOffice(Guid id, OfficeRequest officeRequest)
-        {
-            await _officeService.UpdateOfficeAsync(id, officeRequest);
+    /// <summary>
+    /// Delete an office by its ID.
+    /// </summary>
+    /// <param name="id">The ID of the office to delete.</param>
+    /// <returns>NoContent result.</returns>
+    [HttpDelete("{id:guid}")]
+    public async Task<ActionResult> DeleteOffice(Guid id)
+    {
+        await _officeService.DeleteOfficeAsync(id);
 
-            return Ok();
-        }
-
-        [HttpDelete("{id:guid}")]
-        public async Task<ActionResult> DeleteOffice(Guid id)
-        {
-            await _officeService.DeleteOfficeAsync(id);
-
-            return NoContent();
-        }
+        return NoContent();
     }
 }

@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
 using InnoClinic.Offices.Application.Services;
+using InnoClinic.Offices.Core.Abstractions;
 using InnoClinic.Offices.Core.Models.OfficeModels;
 using InnoClinic.Offices.DataAccess.Repositories;
-using InnoClinic.Offices.Infrastructure.RabbitMQ;
+using InnoClinic.Offices.Infrastructure.Enums.Queues;
+using InnoClinic.Offices.Infrastructure.Options.RabbitMQ;
 using Moq;
 
 namespace InnoClinic.Offices.TestSuiteNUnit.ServiceTests;
@@ -68,7 +70,7 @@ class OfficeServiceTests
         _yandexGeocodingServiceMock.Verify(service => service.GetCoordinatesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         _officeRepositoryMock.Verify(repo => repo.CreateAsync(It.IsAny<OfficeEntity>()), Times.Once);
         _mapperMock.Verify(m => m.Map<OfficeDto>(officeEntity), Times.Once);
-        _rabbitMQServiceMock.Verify(service => service.PublishMessageAsync(officeDto, RabbitMQQueues.ADD_OFFICE_QUEUE), Times.Once);
+        _rabbitMQServiceMock.Verify(service => service.PublishMessageAsync(officeDto, OfficeQueuesEnum.AddOffice.ToString()), Times.Once);
     }
 
     [Test]
@@ -88,8 +90,8 @@ class OfficeServiceTests
         var result = await _officeService.GetAllOfficesAsync();
 
         // Assert
-        Assert.NotNull(result);
-        Assert.AreEqual(officeEntities.Count, result.Count());
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result.Count(), Is.EqualTo(officeEntities.Count));
 
         _officeRepositoryMock.Verify(repo => repo.GetAllAsync(), Times.Once);
     }
@@ -153,7 +155,7 @@ class OfficeServiceTests
         _yandexGeocodingServiceMock.Verify(service => service.GetCoordinatesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         _officeRepositoryMock.Verify(repo => repo.UpdateAsync(It.IsAny<OfficeEntity>()), Times.Once);
         _mapperMock.Verify(m => m.Map<OfficeDto>(officeEntity), Times.Once);
-        _rabbitMQServiceMock.Verify(service => service.PublishMessageAsync(officeDto, RabbitMQQueues.UPDATE_OFFICE_QUEUE), Times.Once);
+        _rabbitMQServiceMock.Verify(service => service.PublishMessageAsync(officeDto, OfficeQueuesEnum.UpdateOffice.ToString()), Times.Once);
     }
 
     [Test]
@@ -170,6 +172,6 @@ class OfficeServiceTests
         _officeRepositoryMock.Verify(repo => repo.GetByIdAsync(officeEntity.Id), Times.Once);
         _officeRepositoryMock.Verify(repo => repo.DeleteAsync(officeEntity.Id), Times.Once);
         _mapperMock.Verify(m => m.Map<OfficeDto>(officeEntity), Times.Once);
-        _rabbitMQServiceMock.Verify(service => service.PublishMessageAsync(officeDto, RabbitMQQueues.DELETE_OFFICE_QUEUE), Times.Once);
+        _rabbitMQServiceMock.Verify(service => service.PublishMessageAsync(officeDto, OfficeQueuesEnum.DeleteOffice.ToString()), Times.Once);
     }
 }

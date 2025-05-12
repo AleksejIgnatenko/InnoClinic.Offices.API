@@ -1,13 +1,13 @@
 ﻿using InnoClinic.Offices.Core.Models.OfficeModels;
 using InnoClinic.Offices.DataAccess.Context;
 using InnoClinic.Offices.DataAccess.Repositories;
-using InnoClinic.Offices.Infrastructure.Mongo;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Testcontainers.MongoDb;
+using InnoClinic.Offices.Infrastructure.Options.Mongo;
 
 namespace InnoClinic.Offices.TestSuiteNUnit.RepositoryTests;
 
@@ -15,7 +15,7 @@ class RepositoryBaseTests
 {
     private MongoDbContainer _dbContainer;
     private MongoDbContext _context;
-    private RepositoryBase<OfficeEntity> _repository;
+    private BaseRepository<OfficeEntity> _repository;
 
     private OfficeEntity office;
 
