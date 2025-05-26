@@ -48,6 +48,8 @@ public class OfficeController(IOfficeService officeService) : ControllerBase
     /// <returns>ActionResult with the office information.</returns>
     [AllowAnonymous]
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(OfficeEntity), 200)]
+    [ProducesResponseType(404)]
     [ResponseCache(CacheProfileName = nameof(CacheProfileNameEnum.CacheDefault90))]
     public async Task<ActionResult> GetOfficeById(Guid id)
     {

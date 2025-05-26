@@ -3,6 +3,7 @@ using InnoClinic.Offices.Core.Exceptions;
 using InnoClinic.Offices.Infrastructure.Options.YandexGeocoding;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
+using System.Net;
 
 namespace InnoClinic.Offices.Application.Services;
 
@@ -45,6 +46,6 @@ public class YandexGeocodingService(IOptions<YandexGeocodingOptions> yandexGeoco
             return (latitude, longitude);
         }
 
-        throw new ExceptionWithStatusCode("The specified address could not be found", 404);
+        throw new ExceptionWithStatusCode("The specified address could not be found", HttpStatusCode.NotFound);
     }
 }
