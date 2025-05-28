@@ -1,6 +1,7 @@
 ﻿using InnoClinic.Offices.Core.Abstractions;
 using InnoClinic.Offices.Core.Models;
 using MongoDB.Driver;
+using System.Linq.Expressions;
 
 namespace InnoClinic.Offices.DataAccess.Repositories;
 
@@ -25,16 +26,40 @@ public abstract class BaseRepository<T>(IMongoCollection<T> collection) : IBaseR
     /// Retrieves all entities of type T asynchronously.
     /// </summary>
     /// <returns>An enumerable collection of entities of type T.</returns>
-    public abstract Task<IEnumerable<T>> GetAllAsync();
+    public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken)
+    {
+        return await _collection
+            .Find(entity => true)
+            .ToListAsync(cancellationToken: cancellationToken);
+    }
 
     /// <summary>
     /// Retrieves an entity of type T by its Id asynchronously.
     /// </summary>
     /// <param name="id">The ID of the entity to retrieve.</param>
     /// <returns>The entity with the specified Id.</returns>
-    public async Task<T> GetByIdAsync(Guid id)
+    public async Task<T> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        return await _collection.Find(entity => entity.Id == id).FirstOrDefaultAsync();
+        return await _collection
+            .Find(entity => entity.Id == id)
+            .FirstOrDefaultAsync(cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Asynchronously retrieves all entities that match the specified condition.
+    /// </summary>
+    /// <param name="predicate">An expression that defines the condition for filtering the entities.</param>
+    /// <param name="cancellationToken">A cancellation token to observe while waiting for the task to complete.</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. 
+    /// The task result contains a collection of entities that match the condition. 
+    /// Returns an empty collection if no entities are found.
+    /// </returns>
+    public async Task<IEnumerable<T>> GetByConditionAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken)
+    {
+        return await _collection
+            .Find(predicate)
+            .ToListAsync(cancellationToken: cancellationToken);
     }
 
     /// <summary>

@@ -91,14 +91,14 @@ class OfficeRepositoryTests
     }
 
     [Test]
-    public async Task GetAllActiveOfficesAsync_ShouldReturnsOnlyActiveOffices()
+    public async Task GetOfficesByConditionAsync_ShouldReturnsOnlyActiveOffices()
     {
         // Arrange
         await _repository.CreateAsync(office);
         await _repository.CreateAsync(office1);
 
         // Act
-        var result = await _repository.GetAllActiveOfficesAsync();
+        var result = await _repository.GetByConditionAsync(office => office.IsActive == true, default);
 
         // Assert
         Assert.NotNull(result);

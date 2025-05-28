@@ -24,14 +24,26 @@ public interface IBaseRepository<T> where T : EntityBase
     /// Asynchronously retrieves all entities.
     /// </summary>
     /// <returns>A collection of entities of type T.</returns>
-    Task<IEnumerable<T>> GetAllAsync();
+    Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Asynchronously retrieves all entities that match the specified condition.
+    /// </summary>
+    /// <param name="predicate">An expression that defines the condition for filtering the entities.</param>
+    /// <param name="cancellationToken">A cancellation token to observe while waiting for the task to complete.</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. 
+    /// The task result contains a collection of entities that match the condition. 
+    /// Returns an empty collection if no matching entities are found.
+    /// </returns>
+    Task<IEnumerable<T>> GetByConditionAsync(System.Linq.Expressions.Expression<Func<T, bool>> predicate, CancellationToken cancellationToken);
 
     /// <summary>
     /// Asynchronously retrieves an entity by its unique identifier.
     /// </summary>
     /// <param name="id">The unique identifier of the entity to retrieve.</param>
     /// <returns>The entity of type T corresponding to the specified ID.</returns>
-    Task<T> GetByIdAsync(Guid id);
+    Task<T> GetByIdAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Asynchronously updates an existing entity.

@@ -44,33 +44,33 @@ public class OfficeService(IOfficeRepository officeRepository, IRabbitMQService 
     /// <summary>
     /// Retrieves all offices.
     /// </summary>
-    public async Task<IEnumerable<OfficeEntity>> GetAllOfficesAsync()
+    public async Task<IEnumerable<OfficeEntity>> GetAllOfficesAsync(CancellationToken cancellationToken)
     {
-        return await _officeRepository.GetAllAsync();
+        return await _officeRepository.GetAllAsync(cancellationToken);
     }
 
     /// <summary>
     /// Retrieves all active offices.
     /// </summary>
-    public async Task<IEnumerable<OfficeEntity>> GetAllActiveOfficesAsync()
+    public async Task<IEnumerable<OfficeEntity>> GetAllActiveOfficesAsync(CancellationToken cancellationToken)
     {
-        return await _officeRepository.GetAllActiveOfficesAsync();
+        return await _officeRepository.GetByConditionAsync(office => office.IsActive == true, cancellationToken);
     }
 
     /// <summary>
     /// Retrieves an office by its unique identifier.
     /// </summary>
-    public async Task<OfficeEntity> GetOfficeByIdAsync(Guid id)
+    public async Task<OfficeEntity> GetOfficeByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        return await _officeRepository.GetByIdAsync(id);
+        return await _officeRepository.GetByIdAsync(id, cancellationToken);
     }
 
     /// <summary>
     /// Updates an existing office based on the provided Id and office request.
     /// </summary>
-    public async Task<OfficeEntity> UpdateOfficeAsync(Guid id, OfficeRequest officeRequest)
+    public async Task<OfficeEntity> UpdateOfficeAsync(Guid id, OfficeRequest officeRequest, CancellationToken cancellationToken)
     {
-        var office = await _officeRepository.GetByIdAsync(id);
+        var office = await _officeRepository.GetByIdAsync(id, cancellationToken);
 
         _mapper.Map(officeRequest, office);
         var (longitude, latitude) = await _yandexGeocodingService.GetCoordinatesAsync(office.City, office.Street, office.HouseNumber);
@@ -88,9 +88,9 @@ public class OfficeService(IOfficeRepository officeRepository, IRabbitMQService 
     /// <summary>
     /// Deletes an office based on the provided Id.
     /// </summary>
-    public async Task DeleteOfficeAsync(Guid id)
+    public async Task DeleteOfficeAsync(Guid id, CancellationToken cancellationToken)
     {
-        var office = await _officeRepository.GetByIdAsync(id);
+        var office = await _officeRepository.GetByIdAsync(id, cancellationToken);
         await _officeRepository.DeleteAsync(id);
 
         var officeDto = _mapper.Map<OfficeDto>(office);
