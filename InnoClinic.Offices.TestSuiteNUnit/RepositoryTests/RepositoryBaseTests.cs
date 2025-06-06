@@ -49,7 +49,7 @@ class RepositoryBaseTests
         {
             ConnectionUri = _dbContainer.GetConnectionString(),
             DatabaseName = "TestDatabase",
-            CollectionsNames = new List<string> { "Offices" }
+            CollectionsNames = ["Offices"]
         };
 
         var mongoClient = new CustomMongoClient(Options.Create(options));
@@ -81,15 +81,18 @@ class RepositoryBaseTests
         // Assert
         var result = await _context.OfficesCollection.Find(e => e.Id == office.Id).FirstOrDefaultAsync();
 
-        Assert.IsNotNull(result);
-        Assert.AreEqual(office.Id, result.Id);
-        Assert.AreEqual(office.City, result.City);
-        Assert.AreEqual(office.Street, result.Street);
-        Assert.AreEqual(office.HouseNumber, result.HouseNumber);
-        Assert.AreEqual(office.Longitude, result.Longitude);
-        Assert.AreEqual(office.Latitude, result.Latitude);
-        Assert.AreEqual(office.RegistryPhoneNumber, result.RegistryPhoneNumber);
-        Assert.AreEqual(office.IsActive, result.IsActive);
+        Assert.That(result, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Id, Is.EqualTo(office.Id));
+            Assert.That(result.City, Is.EqualTo(office.City));
+            Assert.That(result.Street, Is.EqualTo(office.Street));
+            Assert.That(result.HouseNumber, Is.EqualTo(office.HouseNumber));
+            Assert.That(result.Longitude, Is.EqualTo(office.Longitude));
+            Assert.That(result.Latitude, Is.EqualTo(office.Latitude));
+            Assert.That(result.RegistryPhoneNumber, Is.EqualTo(office.RegistryPhoneNumber));
+            Assert.That(result.IsActive, Is.EqualTo(office.IsActive));
+        });
     }
 
     [Test]
@@ -112,14 +115,17 @@ class RepositoryBaseTests
         // Assert
         var result = await _context.OfficesCollection.Find(e => e.Id == office.Id).FirstOrDefaultAsync();
 
-        Assert.IsNotNull(result);
-        Assert.AreEqual("CityUpdate", result.City);
-        Assert.AreEqual("StreetUpdate", result.Street);
-        Assert.AreEqual("HouseNumberUpdate", result.HouseNumber);
-        Assert.AreEqual("LongitudeUpdate", result.Longitude);
-        Assert.AreEqual("LatitudeUpdate", result.Latitude);
-        Assert.AreEqual("RegistryPhoneNumberUpdate", result.RegistryPhoneNumber);
-        Assert.AreEqual(false, result.IsActive);
+        Assert.That(result, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.City, Is.EqualTo("CityUpdate"));
+            Assert.That(result.Street, Is.EqualTo("StreetUpdate"));
+            Assert.That(result.HouseNumber, Is.EqualTo("HouseNumberUpdate"));
+            Assert.That(result.Longitude, Is.EqualTo("LongitudeUpdate"));
+            Assert.That(result.Latitude, Is.EqualTo("LatitudeUpdate"));
+            Assert.That(result.RegistryPhoneNumber, Is.EqualTo("RegistryPhoneNumberUpdate"));
+            Assert.That(result.IsActive, Is.EqualTo(false));
+        });
     }
 
     [Test]
@@ -134,6 +140,6 @@ class RepositoryBaseTests
         // Assert
         var result = await _context.OfficesCollection.Find(e => e.Id == office.Id).FirstOrDefaultAsync();
 
-        Assert.IsNull(result);
+        Assert.That(result, Is.Null);
     }
 }

@@ -38,7 +38,7 @@ class OfficeRepositoryTests
         {
             ConnectionUri = _dbContainer.GetConnectionString(),
             DatabaseName = "TestDatabase",
-            CollectionsNames = new List<string> { "Offices" }
+            CollectionsNames = ["Offices"]
         };
 
         var mongoClient = new CustomMongoClient(Options.Create(options));
@@ -63,7 +63,7 @@ class OfficeRepositoryTests
     }
 
     [SetUp]
-    public async Task SetUp()
+    public void SetUp()
     {
         office = new OfficeEntity
         {
@@ -101,12 +101,12 @@ class OfficeRepositoryTests
         var result = await _repository.GetByConditionAsync(office => office.IsActive == true, default);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.AreEqual(1, result.Count());
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result.Count(), Is.EqualTo(1));
 
         foreach (var office in result)
         {
-            Assert.IsTrue(office.IsActive);
+            Assert.That(office.IsActive, Is.True);
         }
     }
 }

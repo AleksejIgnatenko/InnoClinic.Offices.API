@@ -1,65 +1,55 @@
-﻿using AutoMapper;
+﻿using AutoFixture;
+using AutoFixture.AutoMoq;
+using AutoMapper;
 using InnoClinic.Offices.Application.Services;
 using InnoClinic.Offices.Core.Abstractions;
 using InnoClinic.Offices.Core.Models.OfficeModels;
 using InnoClinic.Offices.Infrastructure.Enums.Queues;
 using Moq;
-using System.Threading;
+using System.Linq.Expressions;
+using FluentAssertions;
 
 namespace InnoClinic.Offices.TestSuiteNUnit.ServiceTests;
 
-class OfficeServiceTests
+[TestFixture]
+public class OfficeServiceTests
 {
+    private IFixture _fixture;
     private Mock<IOfficeRepository> _officeRepositoryMock;
     private Mock<IRabbitMQService> _rabbitMQServiceMock;
     private Mock<IMapper> _mapperMock;
     private Mock<IYandexGeocodingService> _yandexGeocodingServiceMock;
 
     private OfficeService _officeService;
-    private OfficeEntity officeEntity;
 
-    private OfficeDto officeDto;
-    private OfficeRequest officeRequest;
-
-    [SetUp]
-    public void SetUp()
+    [OneTimeSetUp]
+    public void OneTimeSetUp()
     {
-        officeRequest = new OfficeRequest("City", "Street", "HouseNumber", "OfficeNumber", "PhotoId", "RegistryPhoneNumber", true);
-        officeEntity = new OfficeEntity
-        {
-            Id = Guid.NewGuid(),
-            City = "City",
-            Street = "Street",
-            HouseNumber = "HouseNumber",
-            OfficeNumber = "OfficeNumber",
-            PhotoId = "PhotoId",
-            RegistryPhoneNumber = "RegistryPhoneNumber",
-            IsActive = true,
-        };
-        officeDto = new OfficeDto(officeEntity.Id, officeEntity.City, officeEntity.Street, officeEntity.HouseNumber, officeEntity.OfficeNumber, officeEntity.RegistryPhoneNumber, officeEntity.IsActive);
+        _fixture = new Fixture().Customize(new AutoMoqCustomization());
+        _officeRepositoryMock = _fixture.Freeze<Mock<IOfficeRepository>>();
+        _rabbitMQServiceMock = _fixture.Freeze<Mock<IRabbitMQService>>();
+        _mapperMock = _fixture.Freeze<Mock<IMapper>>();
+        _yandexGeocodingServiceMock = _fixture.Freeze<Mock<IYandexGeocodingService>>();
 
-        _officeRepositoryMock = new Mock<IOfficeRepository>();
-        _rabbitMQServiceMock = new Mock<IRabbitMQService>();
-        _mapperMock = new Mock<IMapper>();
-        _yandexGeocodingServiceMock = new Mock<IYandexGeocodingService>();
-
-        _officeService = new OfficeService(
-            _officeRepositoryMock.Object,
-            _rabbitMQServiceMock.Object,
-            _mapperMock.Object,
-            _yandexGeocodingServiceMock.Object
-            );
+        _officeService = _fixture.Create<OfficeService>();
     }
 
     [Test]
     public async Task CreateOfficeAsync_ValidOffice_ResultCreated()
     {
         // Arrange
-        _mapperMock.Setup(m => m.Map<OfficeEntity>(It.IsAny<OfficeRequest>())).Returns(officeEntity);
+        var officeRequest = _fixture.Create<OfficeRequest>();
+        var officeEntity = _fixture.Build<OfficeEntity>()
+            .With(e => e.Id, Guid.NewGuid())
+            .With(e => e.IsActive, true)
+            .Create();
+        var officeDto = _fixture.Create<OfficeDto>();
+
+        _mapperMock.Setup(m => m.Map<OfficeEntity>(officeRequest)).Returns(officeEntity);
         _yandexGeocodingServiceMock.Setup(service => service.GetCoordinatesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(("longitude", "latitude"));
         _officeRepositoryMock.Setup(repo => repo.CreateAsync(It.IsAny<OfficeEntity>())).Returns(Task.FromResult(officeEntity));
-        _mapperMock.Setup(m => m.Map<OfficeDto>(officeEntity)).Returns(officeDto);
+        _mapperMock.Setup(m => m.Map<OfficeDto>(It.IsAny<OfficeEntity>())).Returns(officeDto);
 
         // Act
         await _officeService.CreateOfficeAsync(officeRequest);
@@ -68,7 +58,7 @@ class OfficeServiceTests
         _mapperMock.Verify(m => m.Map<OfficeEntity>(officeRequest), Times.Once);
         _yandexGeocodingServiceMock.Verify(service => service.GetCoordinatesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         _officeRepositoryMock.Verify(repo => repo.CreateAsync(It.IsAny<OfficeEntity>()), Times.Once);
-        _mapperMock.Verify(m => m.Map<OfficeDto>(officeEntity), Times.Once);
+        _mapperMock.Verify(m => m.Map<OfficeDto>(It.IsAny<OfficeEntity>()), Times.Once);
         _rabbitMQServiceMock.Verify(service => service.PublishMessageAsync(officeDto, OfficeQueuesEnum.AddOffice.ToString()), Times.Once);
     }
 
@@ -76,84 +66,104 @@ class OfficeServiceTests
     public async Task GetAllOfficesAsync_ShouldReturnAllOffices()
     {
         // Arrange
-        var officeEntities = new List<OfficeEntity>
-        {
-            new OfficeEntity { Id = Guid.NewGuid() }
-        };
+        var officeEntities = _fixture.CreateMany<OfficeEntity>(2).ToList();
 
-        officeEntities.Add(officeEntity);
-
-        _officeRepositoryMock.Setup(repo => repo.GetAllAsync(default)).ReturnsAsync(officeEntities);
+        _officeRepositoryMock.Setup(repo => repo.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(officeEntities);
 
         // Act
-        var result = await _officeService.GetAllOfficesAsync(default);
+        var result = await _officeService.GetAllOfficesAsync(CancellationToken.None);
 
         // Assert
-        Assert.That(result, Is.Not.Null);
-        Assert.That(result.Count(), Is.EqualTo(officeEntities.Count));
+        result.Should().NotBeNull();
+        result.Should().HaveCount(officeEntities.Count);
+        result.Should().BeEquivalentTo(officeEntities);
 
-        _officeRepositoryMock.Verify(repo => repo.GetAllAsync(default), Times.Once);
+        _officeRepositoryMock.Verify(repo => repo.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
     public async Task GetAllActiveOfficesAsync_ShouldReturnAllActiveOffices()
     {
         // Arrange
-        var officeEntities = new List<OfficeEntity>
-        {
-            new OfficeEntity { Id = Guid.NewGuid(), IsActive = true }
-        };
+        var activeOffice = _fixture.Build<OfficeEntity>().With(o => o.IsActive, true).Create();
+        var inactiveOffice = _fixture.Build<OfficeEntity>().With(o => o.IsActive, false).Create();
 
-        officeEntities.Add(officeEntity);
+        var allOfficesInDb = new List<OfficeEntity> { activeOffice, inactiveOffice };
 
-        _officeRepositoryMock.Setup(repo => repo.GetByConditionAsync(office => office.IsActive == true, default)).ReturnsAsync(officeEntities);
+        _officeRepositoryMock.Setup(repo => repo.GetByConditionAsync(
+                o => o.IsActive == true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Expression<Func<OfficeEntity, bool>> predicate, CancellationToken ct) =>
+            {
+                return allOfficesInDb.Where(predicate.Compile()).ToList();
+            });
 
         // Act
-        var result = await _officeService.GetAllActiveOfficesAsync(default);
+        var result = await _officeService.GetAllActiveOfficesAsync(CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.AreEqual(officeEntities.Count, result.Count());
+        result.Should().NotBeNull();
+        result.Should().HaveCount(1);
+        result.Should().ContainSingle();
+        result.First().Should().BeEquivalentTo(activeOffice);
 
-        _officeRepositoryMock.Verify(repo => repo.GetByConditionAsync(office => office.IsActive == true, default), Times.Once);
+        _officeRepositoryMock.Verify(repo => repo.GetByConditionAsync(
+            o => o.IsActive == true,
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
     public async Task GetOfficeByIdAsync_ShouldReturnOfficeById()
     {
         // Arrange
-        _officeRepositoryMock.Setup(repo => repo.GetByIdAsync(officeEntity.Id, default)).ReturnsAsync(officeEntity);
+        var officeId = _fixture.Create<Guid>();
+        var officeEntity = _fixture.Build<OfficeEntity>().With(e => e.Id, officeId).Create();
+
+        _officeRepositoryMock.Setup(repo => repo.GetByIdAsync(officeId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(officeEntity);
 
         // Act
-        var result = await _officeService.GetOfficeByIdAsync(officeEntity.Id, default);
+        var result = await _officeService.GetOfficeByIdAsync(officeId, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.AreEqual(officeEntity.Id, result.Id, default);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(officeId);
 
-        _officeRepositoryMock.Verify(repo => repo.GetByIdAsync(officeEntity.Id, default), Times.Once);
+        _officeRepositoryMock.Verify(repo => repo.GetByIdAsync(officeId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
     public async Task UpdateOfficeAsync_ValidOffice_ResultUpdate()
     {
         // Arrange
-        _officeRepositoryMock.Setup(repo => repo.GetByIdAsync(officeEntity.Id, default)).ReturnsAsync(officeEntity);
-        _mapperMock.Setup(m => m.Map<OfficeEntity>(It.IsAny<OfficeRequest>())).Returns(officeEntity);
+        var officeId = _fixture.Create<Guid>();
+        var officeRequest = _fixture.Create<OfficeRequest>();
+        var officeEntity = _fixture.Build<OfficeEntity>()
+            .With(e => e.Id, officeId)
+            .Create();
+        var officeDto = _fixture.Build<OfficeDto>()
+            .With(d => d.Id, officeId)
+            .Create();
+
+        _officeRepositoryMock.Setup(repo => repo.GetByIdAsync(officeId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(officeEntity);
+
+        _mapperMock.Setup(m => m.Map(officeRequest, officeEntity)).Verifiable();
         _yandexGeocodingServiceMock.Setup(service => service.GetCoordinatesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(("longitude", "latitude"));
-        _officeRepositoryMock.Setup(repo => repo.UpdateAsync(It.IsAny<OfficeEntity>())).Returns(Task.FromResult(officeEntity));
-        _mapperMock.Setup(m => m.Map<OfficeDto>(officeEntity)).Returns(officeDto);
+
+        _officeRepositoryMock.Setup(repo => repo.UpdateAsync(It.IsAny<OfficeEntity>())).Returns(Task.CompletedTask);
+        _mapperMock.Setup(m => m.Map<OfficeDto>(It.IsAny<OfficeEntity>())).Returns(officeDto);
 
         // Act
-        await _officeService.UpdateOfficeAsync(officeEntity.Id, officeRequest, default);
+        await _officeService.UpdateOfficeAsync(officeId, officeRequest, CancellationToken.None);
 
         // Assert
-        _officeRepositoryMock.Verify(repo => repo.GetByIdAsync(officeEntity.Id, default), Times.Once);
+        _officeRepositoryMock.Verify(repo => repo.GetByIdAsync(officeId, It.IsAny<CancellationToken>()), Times.Once);
         _mapperMock.Verify(m => m.Map(officeRequest, officeEntity), Times.Once);
         _yandexGeocodingServiceMock.Verify(service => service.GetCoordinatesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         _officeRepositoryMock.Verify(repo => repo.UpdateAsync(It.IsAny<OfficeEntity>()), Times.Once);
-        _mapperMock.Verify(m => m.Map<OfficeDto>(officeEntity), Times.Once);
+        _mapperMock.Verify(m => m.Map<OfficeDto>(It.IsAny<OfficeEntity>()), Times.Once);
         _rabbitMQServiceMock.Verify(service => service.PublishMessageAsync(officeDto, OfficeQueuesEnum.UpdateOffice.ToString()), Times.Once);
     }
 
@@ -161,15 +171,21 @@ class OfficeServiceTests
     public async Task DeleteOfficeAsync_ValidOffice_ResultDelete()
     {
         // Arrange
-        _officeRepositoryMock.Setup(repo => repo.GetByIdAsync(officeEntity.Id, default)).ReturnsAsync(officeEntity);
+        var officeId = _fixture.Create<Guid>();
+        var officeEntity = _fixture.Build<OfficeEntity>().With(e => e.Id, officeId).Create();
+        var officeDto = _fixture.Build<OfficeDto>().With(d => d.Id, officeId).Create();
+
+        _officeRepositoryMock.Setup(repo => repo.GetByIdAsync(officeId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(officeEntity);
+
         _mapperMock.Setup(m => m.Map<OfficeDto>(officeEntity)).Returns(officeDto);
 
         // Act
-        await _officeService.DeleteOfficeAsync(officeEntity.Id, default);
+        await _officeService.DeleteOfficeAsync(officeId, CancellationToken.None);
 
         // Assert
-        _officeRepositoryMock.Verify(repo => repo.GetByIdAsync(officeEntity.Id, default), Times.Once);
-        _officeRepositoryMock.Verify(repo => repo.DeleteAsync(officeEntity.Id), Times.Once);
+        _officeRepositoryMock.Verify(repo => repo.GetByIdAsync(officeId, It.IsAny<CancellationToken>()), Times.Once);
+        _officeRepositoryMock.Verify(repo => repo.DeleteAsync(officeId), Times.Once);
         _mapperMock.Verify(m => m.Map<OfficeDto>(officeEntity), Times.Once);
         _rabbitMQServiceMock.Verify(service => service.PublishMessageAsync(officeDto, OfficeQueuesEnum.DeleteOffice.ToString()), Times.Once);
     }
