@@ -8,37 +8,35 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Testcontainers.MongoDb;
 using InnoClinic.Offices.Infrastructure.Options.Mongo;
+using AutoFixture;
+using AutoFixture.AutoMoq;
+using FluentAssertions;
 
 namespace InnoClinic.Offices.TestSuiteNUnit.RepositoryTests;
 
-class RepositoryBaseTests
+[TestFixture]
+public class RepositoryBaseTests
 {
     private MongoDbContainer _dbContainer;
     private MongoDbContext _context;
     private BaseRepository<OfficeEntity> _repository;
 
-    private OfficeEntity office;
+    private readonly Fixture _fixture = new();
+
+    [OneTimeSetUp]
+    public void OneTimeSetUp()
+    {
+        BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+
+        _fixture.Customize(new AutoMoqCustomization());
+    }
 
     [SetUp]
     public async Task SetUp()
     {
-        office = new OfficeEntity
-        {
-            Id = Guid.NewGuid(),
-            City = "City",
-            Street = "Street",
-            HouseNumber = "HouseNumber",
-            Longitude = "Longitude",
-            Latitude = "Latitude",
-            RegistryPhoneNumber = "RegistryPhoneNumber",
-            IsActive = true,
-        };
-
-        BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
-
         _dbContainer = new MongoDbBuilder()
             .WithImage("mongo:latest")
-            .WithName("MongoTestContainer")
+            .WithName($"MongoTestContainer{Guid.NewGuid()}")
             .WithUsername("mongoUser")
             .WithPassword("Password1!")
             .Build();
@@ -68,6 +66,7 @@ class RepositoryBaseTests
     [TearDown]
     public async Task TearDown()
     {
+        await _context.OfficesCollection.DeleteManyAsync(_ => true);
         await _dbContainer.StopAsync();
         await _dbContainer.DisposeAsync();
     }
@@ -75,63 +74,44 @@ class RepositoryBaseTests
     [Test]
     public async Task CreateAsync_ShouldAddEntity()
     {
+        // Arrange
+        var office = _fixture.Create<OfficeEntity>();
+
         // Act
         await _repository.CreateAsync(office);
 
         // Assert
         var result = await _context.OfficesCollection.Find(e => e.Id == office.Id).FirstOrDefaultAsync();
-
-        Assert.That(result, Is.Not.Null);
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Id, Is.EqualTo(office.Id));
-            Assert.That(result.City, Is.EqualTo(office.City));
-            Assert.That(result.Street, Is.EqualTo(office.Street));
-            Assert.That(result.HouseNumber, Is.EqualTo(office.HouseNumber));
-            Assert.That(result.Longitude, Is.EqualTo(office.Longitude));
-            Assert.That(result.Latitude, Is.EqualTo(office.Latitude));
-            Assert.That(result.RegistryPhoneNumber, Is.EqualTo(office.RegistryPhoneNumber));
-            Assert.That(result.IsActive, Is.EqualTo(office.IsActive));
-        });
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(office);
     }
 
     [Test]
     public async Task UpdateAsync_ShouldUpdateEntity()
     {
         // Arrange
+        var office = _fixture.Create<OfficeEntity>();
         await _repository.CreateAsync(office);
 
-        // Act
-        office.City = "CityUpdate";
-        office.Street = "StreetUpdate";
-        office.HouseNumber = "HouseNumberUpdate";
-        office.Longitude = "LongitudeUpdate";
-        office.Latitude = "LatitudeUpdate";
-        office.RegistryPhoneNumber = "RegistryPhoneNumberUpdate";
-        office.IsActive = false;
+        var updatedOffice = _fixture.Build<OfficeEntity>()
+            .With(e => e.Id, office.Id)
+            .With(e => e.IsActive, false)
+            .Create();
 
-        await _repository.UpdateAsync(office);
+        // Act
+        await _repository.UpdateAsync(updatedOffice);
 
         // Assert
         var result = await _context.OfficesCollection.Find(e => e.Id == office.Id).FirstOrDefaultAsync();
-
-        Assert.That(result, Is.Not.Null);
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.City, Is.EqualTo("CityUpdate"));
-            Assert.That(result.Street, Is.EqualTo("StreetUpdate"));
-            Assert.That(result.HouseNumber, Is.EqualTo("HouseNumberUpdate"));
-            Assert.That(result.Longitude, Is.EqualTo("LongitudeUpdate"));
-            Assert.That(result.Latitude, Is.EqualTo("LatitudeUpdate"));
-            Assert.That(result.RegistryPhoneNumber, Is.EqualTo("RegistryPhoneNumberUpdate"));
-            Assert.That(result.IsActive, Is.EqualTo(false));
-        });
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(updatedOffice, opt => opt.Excluding(o => o.Id));
     }
 
     [Test]
     public async Task DeleteAsync_ShouldRemoveEntity()
     {
         // Arrange
+        var office = _fixture.Create<OfficeEntity>();
         await _repository.CreateAsync(office);
 
         // Act
@@ -139,7 +119,6 @@ class RepositoryBaseTests
 
         // Assert
         var result = await _context.OfficesCollection.Find(e => e.Id == office.Id).FirstOrDefaultAsync();
-
-        Assert.That(result, Is.Null);
+        result.Should().BeNull();
     }
 }
