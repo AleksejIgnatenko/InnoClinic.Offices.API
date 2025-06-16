@@ -121,4 +121,51 @@ public class RepositoryBaseTests
         var result = await _context.OfficesCollection.Find(e => e.Id == office.Id).FirstOrDefaultAsync();
         result.Should().BeNull();
     }
+
+    [Test]
+    public async Task GetAllAsync_ShouldReturnAllEntities()
+    {
+        // Arrange
+        var offices = _fixture.CreateMany<OfficeEntity>(3).ToList();
+
+        foreach (var office in offices)
+        {
+            await _repository.CreateAsync(office);
+        }
+
+        // Act
+        var result = await _repository.GetAllAsync(CancellationToken.None);
+
+        // Assert
+        result.Should().HaveCount(3);
+        result.Should().BeEquivalentTo(offices);
+    }
+
+    [Test]
+    public async Task GetByIdAsync_ShouldReturnCorrectEntity()
+    {
+        // Arrange
+        var office = _fixture.Create<OfficeEntity>();
+        await _repository.CreateAsync(office);
+
+        // Act
+        var result = await _repository.GetByIdAsync(office.Id, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(office);
+    }
+
+    [Test]
+    public async Task GetByIdAsync_ShouldReturnNull_WhenNotFound()
+    {
+        // Arrange
+        var nonExistentId = Guid.NewGuid();
+
+        // Act
+        var result = await _repository.GetByIdAsync(nonExistentId, CancellationToken.None);
+
+        // Assert
+        result.Should().BeNull();
+    }
 }
