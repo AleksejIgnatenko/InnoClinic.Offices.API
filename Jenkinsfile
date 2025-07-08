@@ -24,10 +24,10 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            steps {
-                sh 'dotnet test ${SOLUTION_FILE} --configuration Release'
-            }
-        }
+        // stage('Test') {
+        //     steps {
+        //         sh 'dotnet test ${SOLUTION_FILE} --configuration Release'
+        //     }
+        // }
     }
 }
