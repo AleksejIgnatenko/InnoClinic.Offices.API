@@ -1,24 +1,27 @@
 ﻿using InnoClinic.Offices.Core.Models.OfficeModels;
 using InnoClinic.Offices.DataAccess.Context;
 using InnoClinic.Offices.DataAccess.Repositories;
-using InnoClinic.Offices.Infrastructure.Mongo;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Testcontainers.MongoDb;
+using InnoClinic.Offices.Infrastructure.Options.Mongo;
+using AutoFixture;
+using AutoFixture.AutoMoq;
+using FluentAssertions;
 
 namespace InnoClinic.Offices.TestSuiteNUnit.RepositoryTests;
 
-class OfficeRepositoryTests
+[TestFixture]
+public class OfficeRepositoryTests
 {
     private MongoDbContainer _dbContainer;
     private MongoDbContext _context;
     private OfficeRepository _repository;
 
-    private OfficeEntity office;
-    private OfficeEntity office1;
+    private readonly IFixture _fixture = new Fixture().Customize(new AutoMoqCustomization());
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
@@ -27,7 +30,7 @@ class OfficeRepositoryTests
 
         _dbContainer = new MongoDbBuilder()
             .WithImage("mongo:latest")
-            .WithName("MongoTestContainer")
+            .WithName($"MongoTestContainer{Guid.NewGuid()}")
             .WithUsername("mongoUser")
             .WithPassword("Password1!")
             .Build();
@@ -38,7 +41,7 @@ class OfficeRepositoryTests
         {
             ConnectionUri = _dbContainer.GetConnectionString(),
             DatabaseName = "TestDatabase",
-            CollectionsNames = new List<string> { "Offices" }
+            CollectionsNames = ["Offices"]
         };
 
         var mongoClient = new CustomMongoClient(Options.Create(options));
@@ -62,51 +65,27 @@ class OfficeRepositoryTests
         await _dbContainer.DisposeAsync();
     }
 
-    [SetUp]
-    public async Task SetUp()
-    {
-        office = new OfficeEntity
-        {
-            Id = Guid.NewGuid(),
-            City = "City",
-            Street = "Street",
-            HouseNumber = "HouseNumber",
-            Longitude = "Longitude",
-            Latitude = "Latitude",
-            RegistryPhoneNumber = "RegistryPhoneNumber",
-            IsActive = true,
-        };
-
-        office1 = new OfficeEntity
-        {
-            Id = Guid.NewGuid(),
-            City = "City",
-            Street = "Street",
-            HouseNumber = "HouseNumber",
-            Longitude = "Longitude",
-            Latitude = "Latitude",
-            RegistryPhoneNumber = "RegistryPhoneNumber",
-            IsActive = false,
-        };
-    }
-
     [Test]
-    public async Task GetAllActiveOfficesAsync_ShouldReturnsOnlyActiveOffices()
+    public async Task GetByConditionAsync_WhenActiveOnly_ShouldReturnOnlyActiveOffices()
     {
         // Arrange
-        await _repository.CreateAsync(office);
-        await _repository.CreateAsync(office1);
+        var activeOffice = _fixture.Build<OfficeEntity>()
+            .With(o => o.IsActive, true)
+            .Create();
+
+        var inactiveOffice = _fixture.Build<OfficeEntity>()
+            .With(o => o.IsActive, false)
+            .Create();
+
+        await _repository.CreateAsync(activeOffice);
+        await _repository.CreateAsync(inactiveOffice);
 
         // Act
-        var result = await _repository.GetAllActiveOfficesAsync();
+        var result = await _repository.GetByConditionAsync(e => e.IsActive, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.AreEqual(1, result.Count());
-
-        foreach (var office in result)
-        {
-            Assert.IsTrue(office.IsActive);
-        }
+        result.Should().HaveCount(1);
+        result.Should().ContainSingle(e => e.Id == activeOffice.Id);
+        result.Should().OnlyContain(e => e.IsActive);
     }
 }

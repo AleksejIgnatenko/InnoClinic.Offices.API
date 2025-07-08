@@ -1,5 +1,7 @@
 ﻿using InnoClinic.Offices.Application.Services;
-using InnoClinic.Offices.Infrastructure.RabbitMQ;
+using InnoClinic.Offices.Core.Abstractions;
+using InnoClinic.Offices.Infrastructure.Enums.Queues;
+using InnoClinic.Offices.Infrastructure.Options.RabbitMQ;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -81,9 +83,9 @@ class RabbitMQServiceTests
         using var channel = connection.CreateModel();
 
         // Assert
-        Assert.IsTrue(channel.QueueDeclarePassive(RabbitMQQueues.ADD_OFFICE_QUEUE) != null);
-        Assert.IsTrue(channel.QueueDeclarePassive(RabbitMQQueues.UPDATE_OFFICE_QUEUE) != null);
-        Assert.IsTrue(channel.QueueDeclarePassive(RabbitMQQueues.DELETE_OFFICE_QUEUE) != null);
+        Assert.IsNotNull(channel.QueueDeclarePassive(OfficeQueuesEnum.AddOffice.ToString()));
+        Assert.IsNotNull(channel.QueueDeclarePassive(OfficeQueuesEnum.UpdateOffice.ToString()));
+        Assert.IsNotNull(channel.QueueDeclarePassive(OfficeQueuesEnum.DeleteOffice.ToString()));
     }
 
     [Test]
@@ -91,7 +93,7 @@ class RabbitMQServiceTests
     {
         // Arrange
         var message = new { Id = 1, Name = "Test Office"};
-        var queueName = RabbitMQQueues.ADD_OFFICE_QUEUE;
+        var queueName = OfficeQueuesEnum.AddOffice.ToString();
 
         // Act
         await _rabbitMQService.PublishMessageAsync(message, queueName);

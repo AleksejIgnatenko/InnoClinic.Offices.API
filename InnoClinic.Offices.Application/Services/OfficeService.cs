@@ -1,25 +1,30 @@
 ﻿using AutoMapper;
+using InnoClinic.Offices.Core.Abstractions;
 using InnoClinic.Offices.Core.Models.OfficeModels;
-using InnoClinic.Offices.DataAccess.Repositories;
-using InnoClinic.Offices.Infrastructure.RabbitMQ;
+using InnoClinic.Offices.Infrastructure.Enums.Queues;
 
 namespace InnoClinic.Offices.Application.Services;
 
-public class OfficeService : IOfficeService
-{ 
-    private readonly IOfficeRepository _officeRepository;
-    private readonly IRabbitMQService _rabbitMQService;
-    private readonly IMapper _mapper;
-    private readonly IYandexGeocodingService _yandexGeocodingService;
+/// <summary>
+/// Service for managing office entities including creation, retrieval, updating, and deletion operations.
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="OfficeService"/> class.
+/// </remarks>
+/// <param name="officeRepository">The office repository for data access.</param>
+/// <param name="rabbitMQService">The RabbitMQ service for message publishing.</param>
+/// <param name="mapper">The mapper for object mapping.</param>
+/// <param name="yandexGeocodingService">The Yandex Geocoding service for geocoding operations.</param>
+public class OfficeService(IOfficeRepository officeRepository, IRabbitMQService rabbitMQService, IMapper mapper, IYandexGeocodingService yandexGeocodingService) : IOfficeService
+{
+    private readonly IOfficeRepository _officeRepository = officeRepository;
+    private readonly IRabbitMQService _rabbitMQService = rabbitMQService;
+    private readonly IMapper _mapper = mapper;
+    private readonly IYandexGeocodingService _yandexGeocodingService = yandexGeocodingService;
 
-    public OfficeService(IOfficeRepository officeRepository, IRabbitMQService rabbitMQService, IMapper mapper, IYandexGeocodingService yandexGeocodingService)
-    {
-        _officeRepository = officeRepository;
-        _rabbitMQService = rabbitMQService;
-        _mapper = mapper;
-        _yandexGeocodingService = yandexGeocodingService;
-    }
-
+    /// <summary>
+    /// Creates a new office based on the provided office request.
+    /// </summary>
     public async Task<OfficeEntity> CreateOfficeAsync(OfficeRequest officeRequest)
     {
         var office = _mapper.Map<OfficeEntity>(officeRequest);
@@ -31,29 +36,41 @@ public class OfficeService : IOfficeService
         await _officeRepository.CreateAsync(office);
 
         var officeDto = _mapper.Map<OfficeDto>(office);
-        await _rabbitMQService.PublishMessageAsync(officeDto, RabbitMQQueues.ADD_OFFICE_QUEUE);
+        await _rabbitMQService.PublishMessageAsync(officeDto, OfficeQueuesEnum.AddOffice.ToString());
 
         return office;
     }
 
-    public async Task<IEnumerable<OfficeEntity>> GetAllOfficesAsync()
+    /// <summary>
+    /// Retrieves all offices.
+    /// </summary>
+    public async Task<IEnumerable<OfficeEntity>> GetAllOfficesAsync(CancellationToken cancellationToken)
     {
-        return await _officeRepository.GetAllAsync();
+        return await _officeRepository.GetAllAsync(cancellationToken);
     }
 
-    public async Task<IEnumerable<OfficeEntity>> GetAllActiveOfficesAsync()
+    /// <summary>
+    /// Retrieves all active offices.
+    /// </summary>
+    public async Task<IEnumerable<OfficeEntity>> GetAllActiveOfficesAsync(CancellationToken cancellationToken)
     {
-        return await _officeRepository.GetAllActiveOfficesAsync();
+        return await _officeRepository.GetByConditionAsync(office => office.IsActive == true, cancellationToken);
     }
 
-    public async Task<OfficeEntity> GetOfficeByIdAsync(Guid id)
+    /// <summary>
+    /// Retrieves an office by its unique identifier.
+    /// </summary>
+    public async Task<OfficeEntity> GetOfficeByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        return await _officeRepository.GetByIdAsync(id);
+        return await _officeRepository.GetByIdAsync(id, cancellationToken);
     }
 
-    public async Task UpdateOfficeAsync(Guid id, OfficeRequest officeRequest)
+    /// <summary>
+    /// Updates an existing office based on the provided Id and office request.
+    /// </summary>
+    public async Task<OfficeEntity> UpdateOfficeAsync(Guid id, OfficeRequest officeRequest, CancellationToken cancellationToken)
     {
-        var office = await _officeRepository.GetByIdAsync(id);
+        var office = await _officeRepository.GetByIdAsync(id, cancellationToken);
 
         _mapper.Map(officeRequest, office);
         var (longitude, latitude) = await _yandexGeocodingService.GetCoordinatesAsync(office.City, office.Street, office.HouseNumber);
@@ -63,15 +80,20 @@ public class OfficeService : IOfficeService
         await _officeRepository.UpdateAsync(office);
 
         var officeDto = _mapper.Map<OfficeDto>(office);
-        await _rabbitMQService.PublishMessageAsync(officeDto, RabbitMQQueues.UPDATE_OFFICE_QUEUE);
+        await _rabbitMQService.PublishMessageAsync(officeDto, OfficeQueuesEnum.UpdateOffice.ToString());
+
+        return office;
     }
 
-    public async Task DeleteOfficeAsync(Guid id)
+    /// <summary>
+    /// Deletes an office based on the provided Id.
+    /// </summary>
+    public async Task DeleteOfficeAsync(Guid id, CancellationToken cancellationToken)
     {
-        var office = await _officeRepository.GetByIdAsync(id);
+        var office = await _officeRepository.GetByIdAsync(id, cancellationToken);
         await _officeRepository.DeleteAsync(id);
 
         var officeDto = _mapper.Map<OfficeDto>(office);
-        await _rabbitMQService.PublishMessageAsync(officeDto, RabbitMQQueues.DELETE_OFFICE_QUEUE);
+        await _rabbitMQService.PublishMessageAsync(officeDto, OfficeQueuesEnum.DeleteOffice.ToString());
     }
 }

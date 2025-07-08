@@ -5,21 +5,27 @@ using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson;
 using Serilog;
-using InnoClinic.Offices.Infrastructure.YandexGeocoding;
-using InnoClinic.Offices.Infrastructure.Mongo;
-using InnoClinic.Offices.Infrastructure.RabbitMQ;
-using InnoClinic.Offices.Infrastructure.Jwt;
-using InnoClinic.Offices.Application.Services;
-using Microsoft.AspNetCore.Cors.Infrastructure;
-using InnoClinic.Offices.Infrastructure.Cors;
 using Microsoft.Extensions.Options;
 using InnoClinic.Offices.API.Middlewares;
 using FluentValidation.AspNetCore;
+using InnoClinic.Offices.Core.Abstractions;
+using Microsoft.AspNetCore.Mvc;
+using InnoClinic.Offices.Infrastructure.Options.Mongo;
+using InnoClinic.Offices.Infrastructure.Options.Jwt;
+using InnoClinic.Offices.Infrastructure.Options.RabbitMQ;
+using InnoClinic.Offices.Infrastructure.Options.YandexGeocoding;
+using InnoClinic.Offices.Infrastructure.Enums.Cache;
 
 namespace InnoClinic.Offices.API.Extensions;
 
+/// <summary>
+/// Contains extension methods for configuring the web application builder and application startup.
+/// </summary>
 public static class ProgramExtension
 {
+    /// <summary>
+    /// Configures the web application builder with necessary services and configurations.
+    /// </summary>
     public static WebApplicationBuilder ConfigureBuilder(this WebApplicationBuilder builder)
     {
         Log.Logger = new LoggerConfiguration()
@@ -34,26 +40,23 @@ public static class ProgramExtension
         builder.Services
             .AddOptions(builder.Configuration)
             .AddDbContext()
-            .AddServices()
             .AddRepositories()
+            .AddServices()
+            .AddCaching()
+            .AddCustomSwagger()
             .AddEndpointsApiExplorer()
-            .AddSwaggerGen()
-            .AddHttpClient()
             .AddJwtAuthentication(builder.Services.BuildServiceProvider().GetRequiredService<IOptions<JwtOptions>>())
             .AddMapperProfiles()
-            .AddCors(options =>
-            {
-                var serviceProvider = builder.Services.BuildServiceProvider();
-                var customCorsOptions = serviceProvider.GetRequiredService<IOptions<CustomCorsOptions>>();
-                options.ConfigureAllowAllCors(customCorsOptions);
-            })
             .AddFluentValidation()
+            .AddHttpClient()
             .AddControllers();
-        
 
         return builder;
     }
 
+    /// <summary>
+    /// Configures the web application with necessary middleware and services during startup.
+    /// </summary>
     public static async Task<WebApplication> ConfigureApplicationAsync(this WebApplication app)
     {
         app.UseCustomExceptionHandler();
@@ -71,11 +74,8 @@ public static class ProgramExtension
             app.UseSwaggerUI();
         }
 
-        app.UseSwagger();
-        app.UseSwaggerUI();
         app.UseHttpsRedirection();
         app.UseAuthorization();
-        app.UseCors("AllowAll");
         app.MapControllers();
 
         return app;
@@ -84,7 +84,7 @@ public static class ProgramExtension
     private static IConfiguration LoadConfiguration(this IConfigurationBuilder configuration)
     {
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-        
+
         return configuration
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
@@ -92,13 +92,31 @@ public static class ProgramExtension
             .Build();
     }
 
-    private static IServiceCollection AddOptions(this IServiceCollection services, IConfiguration configuration)
+    private static IServiceCollection AddOptions(this IServiceCollection services, ConfigurationManager configuration)
     {
         services.Configure<RabbitMQOptions>(configuration.GetSection(nameof(RabbitMQOptions)));
         services.Configure<JwtOptions>(configuration.GetSection(nameof(JwtOptions)));
         services.Configure<MongoOptions>(configuration.GetSection(nameof(MongoOptions)));
         services.Configure<YandexGeocodingOptions>(configuration.GetSection(nameof(YandexGeocodingOptions)));
-        services.Configure<CustomCorsOptions>(configuration.GetSection(nameof(CustomCorsOptions)));
+
+        return services;
+    }
+
+    private static IServiceCollection AddCaching(this IServiceCollection services)
+    {
+        services.AddResponseCaching(options =>
+        {
+            options.UseCaseSensitivePaths = true;
+        });
+
+        services.AddControllersWithViews(options =>
+        {
+            options.CacheProfiles.Add(CacheProfileNameEnum.CacheDefault90.ToString(), new CacheProfile
+            {
+                Duration = 90,
+                Location = ResponseCacheLocation.Any
+            });
+        });
 
         return services;
     }
@@ -108,19 +126,6 @@ public static class ProgramExtension
         services.AddAutoMapper(typeof(OfficeMapperProfiles));
 
         return services;
-    }
-
-    private static CorsOptions ConfigureAllowAllCors(this CorsOptions options, IOptions<CustomCorsOptions> customCorsOptions)
-    {
-        options.AddPolicy("AllowAll", policy =>
-        {
-            policy.WithHeaders().AllowAnyHeader();
-            policy.WithOrigins(customCorsOptions.Value.AllowedOrigins);
-            policy.WithMethods().AllowAnyMethod();
-            policy.AllowCredentials();
-        });
-
-        return options;
     }
 
     private static IApplicationBuilder UseCustomExceptionHandler(this IApplicationBuilder webApplication)

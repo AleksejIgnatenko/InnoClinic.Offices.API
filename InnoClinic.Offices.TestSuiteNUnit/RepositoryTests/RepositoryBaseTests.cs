@@ -1,44 +1,42 @@
 ﻿using InnoClinic.Offices.Core.Models.OfficeModels;
 using InnoClinic.Offices.DataAccess.Context;
 using InnoClinic.Offices.DataAccess.Repositories;
-using InnoClinic.Offices.Infrastructure.Mongo;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Testcontainers.MongoDb;
+using InnoClinic.Offices.Infrastructure.Options.Mongo;
+using AutoFixture;
+using AutoFixture.AutoMoq;
+using FluentAssertions;
 
 namespace InnoClinic.Offices.TestSuiteNUnit.RepositoryTests;
 
-class RepositoryBaseTests
+[TestFixture]
+public class RepositoryBaseTests
 {
     private MongoDbContainer _dbContainer;
     private MongoDbContext _context;
-    private RepositoryBase<OfficeEntity> _repository;
+    private BaseRepository<OfficeEntity> _repository;
 
-    private OfficeEntity office;
+    private readonly Fixture _fixture = new();
+
+    [OneTimeSetUp]
+    public void OneTimeSetUp()
+    {
+        BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+
+        _fixture.Customize(new AutoMoqCustomization());
+    }
 
     [SetUp]
     public async Task SetUp()
     {
-        office = new OfficeEntity
-        {
-            Id = Guid.NewGuid(),
-            City = "City",
-            Street = "Street",
-            HouseNumber = "HouseNumber",
-            Longitude = "Longitude",
-            Latitude = "Latitude",
-            RegistryPhoneNumber = "RegistryPhoneNumber",
-            IsActive = true,
-        };
-
-        BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
-
         _dbContainer = new MongoDbBuilder()
             .WithImage("mongo:latest")
-            .WithName("MongoTestContainer")
+            .WithName($"MongoTestContainer{Guid.NewGuid()}")
             .WithUsername("mongoUser")
             .WithPassword("Password1!")
             .Build();
@@ -49,7 +47,7 @@ class RepositoryBaseTests
         {
             ConnectionUri = _dbContainer.GetConnectionString(),
             DatabaseName = "TestDatabase",
-            CollectionsNames = new List<string> { "Offices" }
+            CollectionsNames = ["Offices"]
         };
 
         var mongoClient = new CustomMongoClient(Options.Create(options));
@@ -68,6 +66,7 @@ class RepositoryBaseTests
     [TearDown]
     public async Task TearDown()
     {
+        await _context.OfficesCollection.DeleteManyAsync(_ => true);
         await _dbContainer.StopAsync();
         await _dbContainer.DisposeAsync();
     }
@@ -75,57 +74,44 @@ class RepositoryBaseTests
     [Test]
     public async Task CreateAsync_ShouldAddEntity()
     {
+        // Arrange
+        var office = _fixture.Create<OfficeEntity>();
+
         // Act
         await _repository.CreateAsync(office);
 
         // Assert
         var result = await _context.OfficesCollection.Find(e => e.Id == office.Id).FirstOrDefaultAsync();
-
-        Assert.IsNotNull(result);
-        Assert.AreEqual(office.Id, result.Id);
-        Assert.AreEqual(office.City, result.City);
-        Assert.AreEqual(office.Street, result.Street);
-        Assert.AreEqual(office.HouseNumber, result.HouseNumber);
-        Assert.AreEqual(office.Longitude, result.Longitude);
-        Assert.AreEqual(office.Latitude, result.Latitude);
-        Assert.AreEqual(office.RegistryPhoneNumber, result.RegistryPhoneNumber);
-        Assert.AreEqual(office.IsActive, result.IsActive);
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(office);
     }
 
     [Test]
     public async Task UpdateAsync_ShouldUpdateEntity()
     {
         // Arrange
+        var office = _fixture.Create<OfficeEntity>();
         await _repository.CreateAsync(office);
 
-        // Act
-        office.City = "CityUpdate";
-        office.Street = "StreetUpdate";
-        office.HouseNumber = "HouseNumberUpdate";
-        office.Longitude = "LongitudeUpdate";
-        office.Latitude = "LatitudeUpdate";
-        office.RegistryPhoneNumber = "RegistryPhoneNumberUpdate";
-        office.IsActive = false;
+        var updatedOffice = _fixture.Build<OfficeEntity>()
+            .With(e => e.Id, office.Id)
+            .With(e => e.IsActive, false)
+            .Create();
 
-        await _repository.UpdateAsync(office);
+        // Act
+        await _repository.UpdateAsync(updatedOffice);
 
         // Assert
         var result = await _context.OfficesCollection.Find(e => e.Id == office.Id).FirstOrDefaultAsync();
-
-        Assert.IsNotNull(result);
-        Assert.AreEqual("CityUpdate", result.City);
-        Assert.AreEqual("StreetUpdate", result.Street);
-        Assert.AreEqual("HouseNumberUpdate", result.HouseNumber);
-        Assert.AreEqual("LongitudeUpdate", result.Longitude);
-        Assert.AreEqual("LatitudeUpdate", result.Latitude);
-        Assert.AreEqual("RegistryPhoneNumberUpdate", result.RegistryPhoneNumber);
-        Assert.AreEqual(false, result.IsActive);
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(updatedOffice, opt => opt.Excluding(o => o.Id));
     }
 
     [Test]
     public async Task DeleteAsync_ShouldRemoveEntity()
     {
         // Arrange
+        var office = _fixture.Create<OfficeEntity>();
         await _repository.CreateAsync(office);
 
         // Act
@@ -133,7 +119,53 @@ class RepositoryBaseTests
 
         // Assert
         var result = await _context.OfficesCollection.Find(e => e.Id == office.Id).FirstOrDefaultAsync();
+        result.Should().BeNull();
+    }
 
-        Assert.IsNull(result);
+    [Test]
+    public async Task GetAllAsync_ShouldReturnAllEntities()
+    {
+        // Arrange
+        var offices = _fixture.CreateMany<OfficeEntity>(3).ToList();
+
+        foreach (var office in offices)
+        {
+            await _repository.CreateAsync(office);
+        }
+
+        // Act
+        var result = await _repository.GetAllAsync(CancellationToken.None);
+
+        // Assert
+        result.Should().HaveCount(3);
+        result.Should().BeEquivalentTo(offices);
+    }
+
+    [Test]
+    public async Task GetByIdAsync_ShouldReturnCorrectEntity()
+    {
+        // Arrange
+        var office = _fixture.Create<OfficeEntity>();
+        await _repository.CreateAsync(office);
+
+        // Act
+        var result = await _repository.GetByIdAsync(office.Id, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(office);
+    }
+
+    [Test]
+    public async Task GetByIdAsync_ShouldReturnNull_WhenNotFound()
+    {
+        // Arrange
+        var nonExistentId = Guid.NewGuid();
+
+        // Act
+        var result = await _repository.GetByIdAsync(nonExistentId, CancellationToken.None);
+
+        // Assert
+        result.Should().BeNull();
     }
 }
