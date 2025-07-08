@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    environment {
+        DOTNET_VERSION = '8.0'
+    }
+
     stages {
         stage('Clone Repository') {
             steps {
