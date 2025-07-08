@@ -1,32 +1,23 @@
 pipeline {
     agent any
 
-    tools {
-        dotnet 'dotnet-sdk-8.0'
-    }
-
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'master', url: 'https://github.com/AleksejIgnatenko/InnoClinic.Offices.API '
+                git branch: 'main', url: 'https://github.com/AleksejIgnatenko/InnoClinic.Offices.API '
             }
         }
 
-        stage('Restore') {
+        stage('Build with .NET') {
             steps {
-                sh 'dotnet restore InnoClinic.Offices.API.sln'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                sh 'dotnet build InnoClinic.Offices.API.sln --configuration Release'
-            }
-        }
-
-        stage('Test') {
-            steps {
-                sh 'dotnet test InnoClinic.Offices.API.sln --configuration Release'
+                script {
+                    docker.image("mcr.microsoft.com/dotnet/sdk:8.0")
+                        .inside("-v /tmp:/tmp") {
+                            sh 'dotnet restore InnoClinic.Offices.API.sln'
+                            sh 'dotnet build InnoClinic.Offices.API.sln --configuration Release'
+                            sh 'dotnet test InnoClinic.Offices.API.sln --configuration Release'
+                        }
+                }
             }
         }
     }
