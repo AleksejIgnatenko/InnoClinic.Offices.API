@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/ ваш-аккаунт/ваш-репозиторий.git'
+                git branch: 'main', url: 'https://github.com/AleksejIgnatenko/InnoClinic.Offices.API'
             }
         }
 
