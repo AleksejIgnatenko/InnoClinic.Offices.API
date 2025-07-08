@@ -9,37 +9,34 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'master', url: 'https://github.com/AleksejIgnatenko/InnoClinic.Offices.API '
+                git branch: 'main', url: 'https://github.com/AleksejIgnatenko/InnoClinic.Offices.API '
             }
         }
 
         stage('Restore') {
             steps {
-                script {
-                    docker.image(env.DOTNET_IMAGE).inside {
-                        sh "dotnet restore ${env.SOLUTION_FILE}"
-                    }
-                }
+                sh """
+                  docker run --rm -v \$(pwd):/src -w /src ${env.DOTNET_IMAGE} \\
+                    dotnet restore ${env.SOLUTION_FILE}
+                """
             }
         }
 
         stage('Build') {
             steps {
-                script {
-                    docker.image(env.DOTNET_IMAGE).inside {
-                        sh "dotnet build ${env.SOLUTION_FILE} --configuration Release"
-                    }
-                }
+                sh """
+                  docker run --rm -v \$(pwd):/src -w /src ${env.DOTNET_IMAGE} \\
+                    dotnet build ${env.SOLUTION_FILE} --configuration Release
+                """
             }
         }
 
         stage('Test') {
             steps {
-                script {
-                    docker.image(env.DOTNET_IMAGE).inside {
-                        sh "dotnet test ${env.SOLUTION_FILE} --configuration Release"
-                    }
-                }
+                sh """
+                  docker run --rm -v \$(pwd):/src -w /src ${env.DOTNET_IMAGE} \\
+                    dotnet test ${env.SOLUTION_FILE} --configuration Release
+                """
             }
         }
     }
