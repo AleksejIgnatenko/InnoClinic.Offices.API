@@ -10,19 +10,19 @@ pipeline {
 
         stage('Restore') {
             steps {
-                sh 'dotnet restore YourSolution.sln'
+                sh 'dotnet restore InnoClinic.Offices.API.sln'
             }
         }
 
         stage('Build') {
             steps {
-                sh 'dotnet build YourSolution.sln --configuration Release'
+                sh 'dotnet build InnoClinic.Offices.API.sln --configuration Release'
             }
         }
 
         stage('Test') {
             steps {
-                sh 'dotnet test YourSolution.sln --configuration Release'
+                sh 'dotnet test InnoClinic.Offices.API.sln --configuration Release'
             }
         }
     }
