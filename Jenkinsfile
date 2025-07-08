@@ -1,9 +1,8 @@
 pipeline {
-    agent any 
+    agent any
 
     environment {
         SOLUTION_FILE = 'InnoClinic.Offices.API.sln'
-        DOTNET_IMAGE  = 'mcr.microsoft.com/dotnet/sdk:8.0'
     }
 
     stages {
@@ -15,28 +14,19 @@ pipeline {
 
         stage('Restore') {
             steps {
-                sh """
-                  docker run --rm -v \$(pwd):/src -w /src ${env.DOTNET_IMAGE} \\
-                    dotnet restore ${env.SOLUTION_FILE}
-                """
+                sh 'dotnet restore ${SOLUTION_FILE}'
             }
         }
 
         stage('Build') {
             steps {
-                sh """
-                  docker run --rm -v \$(pwd):/src -w /src ${env.DOTNET_IMAGE} \\
-                    dotnet build ${env.SOLUTION_FILE} --configuration Release
-                """
+                sh 'dotnet build ${SOLUTION_FILE} --configuration Release'
             }
         }
 
         stage('Test') {
             steps {
-                sh """
-                  docker run --rm -v \$(pwd):/src -w /src ${env.DOTNET_IMAGE} \\
-                    dotnet test ${env.SOLUTION_FILE} --configuration Release
-                """
+                sh 'dotnet test ${SOLUTION_FILE} --configuration Release'
             }
         }
     }
