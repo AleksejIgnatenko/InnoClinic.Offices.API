@@ -8,25 +8,25 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'master', url: 'https://github.com/AleksejIgnatenko/InnoClinic.Offices.API '
+                git branch: 'main', url: 'https://github.com/AleksejIgnatenko/InnoClinic.Offices.API '
             }
         }
 
         stage('Restore') {
             steps {
-                sh 'dotnet restore ${SOLUTION_FILE}'
+                sh "dotnet restore ${env.SOLUTION_FILE}"
             }
         }
 
         stage('Build') {
             steps {
-                sh 'dotnet build ${SOLUTION_FILE} --configuration Release'
+                sh "dotnet build ${env.SOLUTION_FILE} --configuration Release"
             }
         }
 
         stage('Test') {
             steps {
-                sh 'dotnet test ${SOLUTION_FILE} --configuration Release'
+                sh "dotnet test ${env.SOLUTION_FILE} --configuration Release"
             }
         }
     }
